@@ -69,7 +69,8 @@ var LicenseManager = (function() {
     if (!lic) return false;
     // expired без grace — ничего нельзя, КРОМЕ скачивания JSON
     if (lic.status === 'expired') return feature === 'downloadJson';
-    // trial — экспорт и копирование таблицы заблокированы
+    // grace — приложение работает, но ограничения плана сохраняются
+    // trial (включая grace) — экспорт и копирование таблицы заблокированы
     if (lic.plan === 'trial' && (feature === 'export' || feature === 'copy')) return false;
     return true;
   }
@@ -138,21 +139,25 @@ window.applyLicenseKeyFromInput = function() {
     } else {
       if (typeof showToast === 'function') showToast('Лицензия активирована: ' + lic.client, 'ok');
     }
-    // Сохраняем в localStorage
-    try { localStorage.setItem('pm_license_block', JSON.stringify({ license: json.license })); } catch(e) {}
+    // Сохраняем в localStorage (только действующие ключи)
+    if (lic.status !== 'expired') {
+      try { localStorage.setItem('pm_license_block', JSON.stringify({ license: json.license })); } catch(e) {}
+    }
 
     window.LICENSE = lic;
 
-    // Если уже загружены данные — применяем немедленно
+    // Убираем устаревший оверлей/баннер только если новый статус — valid
+    // (для grace оверлей покажется заново через _applyLicenseUI ниже)
+    if (lic.status === 'valid') {
+      var overlay = document.getElementById('licOverlay');
+      if (overlay) overlay.remove();
+      var banner = document.getElementById('licTrialBanner');
+      if (banner) banner.remove();
+    }
+
+    // Применяем UI (один раз)
     _applyLicenseUI(lic);
     _renderLicKeyStatus(lic);
-
-    // Убираем оверлей если он висел
-    var overlay = document.getElementById('licOverlay');
-    if (overlay && (lic.status === 'valid' || lic.status === 'grace')) overlay.remove();
-    var banner = document.getElementById('licTrialBanner');
-    if (banner) banner.remove();
-    if (lic.status === 'valid' || lic.status === 'grace') _applyLicenseUI(lic);
 
     // Очищаем поле
     input.value = '';
@@ -2733,11 +2738,17 @@ function _doLoadJsonFile(file, afterLoad) {
 
       // ── Проверяем лицензию ──────────────────────────────────
       LicenseManager.validate(json).then(function(lic) {
-        window.LICENSE = lic;
 
         if (lic.status === 'none' || lic.status === 'invalid') {
-          // Если нет лицензии в файле — проверим localStorage
-          var savedLic = window.LICENSE;
+          // Если нет лицензии в файле — проверим сохранённую в localStorage
+          var savedLic = null;
+          try {
+            var raw = localStorage.getItem('pm_license_block');
+            if (raw) savedLic = window._savedStartupLic || null;
+          } catch(e) {}
+          // Приоритет: уже применённая лицензия из стартового восстановления
+          savedLic = (window.LICENSE && (window.LICENSE.status === 'valid' || window.LICENSE.status === 'grace'))
+            ? window.LICENSE : savedLic;
           if (!savedLic || (savedLic.status !== 'valid' && savedLic.status !== 'grace')) {
             showToast('Файл не содержит действующей лицензии', 'err');
             return;
@@ -2750,6 +2761,8 @@ function _doLoadJsonFile(file, afterLoad) {
             try { localStorage.setItem('pm_license_block', JSON.stringify({ license: json.license })); } catch(e) {}
           }
         }
+
+        window.LICENSE = lic;
 
         // Загружаем данные
         if (typeof applyJsonToState === 'function') {
@@ -8824,10 +8837,11 @@ function _applyLicenseRestrictions(lic) {
   });
 
   // user-select на таблице в trial
+  var canCopy = LicenseManager.isAllowed('copy');
   var mainWrap = document.getElementById('mainTableWrap');
   if (mainWrap) {
-    mainWrap.style.userSelect = canExport ? '' : 'none';
-    mainWrap.style.webkitUserSelect = canExport ? '' : 'none';
+    mainWrap.style.userSelect = canCopy ? '' : 'none';
+    mainWrap.style.webkitUserSelect = canCopy ? '' : 'none';
   }
 }
 
@@ -8868,6 +8882,11 @@ function _renderLicenseSidebar(lic) {
       + '<div style="font-size:12px;font-weight:700;color:var(--red)">⚠️ Лицензия истекла</div>'
       + '<div style="font-size:10px;color:var(--red);margin-top:2px">Grace-период: ' + lic.daysPast + '/' + 3 + ' дн.</div>'
       + '</div>';
+  } else if (lic.status === 'expired') {
+    block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--red)">🔒 Срок лицензии истёк</div>'
+      + '<div style="font-size:10px;color:var(--red);margin-top:2px">Доступно только скачивание JSON</div>'
+      + '</div>';
   }
 
   footer.prepend(block);
@@ -8875,7 +8894,8 @@ function _renderLicenseSidebar(lic) {
 
 // ── Баннер для trial ──────────────────────────────────────────────────────
 function _showTrialBanner(lic) {
-  if (document.getElementById('licTrialBanner')) return;
+  var existing = document.getElementById('licTrialBanner');
+  if (existing) existing.remove();
   var main = document.querySelector('.app-main');
   if (!main) return;
   var days = lic.daysLeft;
@@ -8893,7 +8913,8 @@ function _showTrialBanner(lic) {
 
 // ── Оверлей при истечении ─────────────────────────────────────────────────
 function _showLicenseOverlay(lic, isGrace) {
-  if (document.getElementById('licOverlay')) return;
+  var existing = document.getElementById('licOverlay');
+  if (existing) existing.remove();
 
   var overlay = document.createElement('div');
   overlay.id = 'licOverlay';
@@ -8906,7 +8927,7 @@ function _showLicenseOverlay(lic, isGrace) {
 
   var titleColor = isGrace ? '#D97706' : '#DC2626';
   var title      = isGrace
-    ? ('⏳ Лицензия истекает — осталось ' + days + ' ' + _pluralDays(days))
+    ? ('⏳ Grace-период: ' + lic.daysPast + ' из 3 ' + _pluralDays(lic.daysPast) + ' истекло')
     : '🔒 Срок лицензии истёк';
   var subtitle   = isGrace
     ? 'Приложение работает в льготном режиме. Продлите лицензию, чтобы не потерять доступ.'
