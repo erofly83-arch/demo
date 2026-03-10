@@ -91,6 +91,7 @@ window.LICENSE = null; // заполняется при загрузке JSON и
         window.LICENSE = lic;
         _applyLicenseUI(lic);
         _renderLicKeyStatus(lic);
+        if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
       } else {
         // истекла — показываем оверлей, но даём скачать
         if (lic.status === 'expired') {
@@ -145,6 +146,11 @@ window.applyLicenseKeyFromInput = function() {
     }
 
     window.LICENSE = lic;
+
+    // Если в блоке лицензии есть контакт клиента — применяем
+    if (json.license.contact && typeof window._userContactLoad === 'function') {
+      window._userContactLoad(json.license.contact);
+    }
 
     // Применяем UI (один раз) — он сам уберёт старые баннер/оверлей
     _applyLicenseUI(lic);
@@ -2734,16 +2740,10 @@ function _doLoadJsonFile(file, afterLoad) {
       LicenseManager.validate(json).then(function(lic) {
 
         if (lic.status === 'none' || lic.status === 'invalid') {
-          // Если нет лицензии в файле — проверим сохранённую в localStorage
-          var savedLic = null;
-          try {
-            var raw = localStorage.getItem('pm_license_block');
-            if (raw) savedLic = window._savedStartupLic || null;
-          } catch(e) {}
-          // Приоритет: уже применённая лицензия из стартового восстановления
-          savedLic = (window.LICENSE && (window.LICENSE.status === 'valid' || window.LICENSE.status === 'grace'))
-            ? window.LICENSE : savedLic;
-          if (!savedLic || (savedLic.status !== 'valid' && savedLic.status !== 'grace')) {
+          // Файл памяти без блока лицензии — принимаем если есть действующая сохранённая лицензия
+          var savedLic = (window.LICENSE && (window.LICENSE.status === 'valid' || window.LICENSE.status === 'grace'))
+            ? window.LICENSE : null;
+          if (!savedLic) {
             showToast('Файл не содержит действующей лицензии', 'err');
             return;
           }
@@ -8810,7 +8810,7 @@ function _applyLicenseUI(lic) {
 
   if (lic.status === 'expired') {
     _showLicenseOverlay(lic, false); // нет grace — полный блок
-  } else if (lic.status === 'grace') {
+  } else if (lic.status === 'grace' && !window._graceOverlayDismissed) {
     _showLicenseOverlay(lic, true);  // grace — с предупреждением, доступ есть
   } else if (lic.status === 'valid' && lic.plan === 'trial') {
     _showTrialBanner(lic);
@@ -9004,7 +9004,10 @@ function _showLicenseOverlay(lic, isGrace) {
     var cont = document.createElement('button');
     cont.textContent = 'Продолжить работу (Grace-период)';
     cont.style.cssText = 'margin-top:8px;width:100%;padding:9px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;font-size:12px;color:#92400E;cursor:pointer;font-family:Inter,sans-serif';
-    cont.onclick = function() { overlay.remove(); };
+    cont.onclick = function() {
+      overlay.remove();
+      window._graceOverlayDismissed = true; // не показывать повторно в этой сессии
+    };
     box.appendChild(cont);
   }
 

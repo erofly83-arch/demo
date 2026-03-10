@@ -486,7 +486,9 @@ async function generate() {
   if (expires < issued)   { toast('Дата окончания раньше даты выдачи', 'warn'); return; }
 
   const key      = await generateHmac(client, plan, expires);
-  const licBlock = { client, plan, issued, expires, key };
+  const licBlock = contact
+    ? { client, plan, issued, expires, key, contact }
+    : { client, plan, issued, expires, key };
   const base     = _clientJson
     ? JSON.parse(JSON.stringify(_clientJson))
     : { barcodes:{}, brands:{}, categoryWords:[], columnSettings:{ templates:[], synonyms:{} } };
