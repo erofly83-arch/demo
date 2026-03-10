@@ -77,7 +77,103 @@ var LicenseManager = (function() {
   return { validate: validate, isAllowed: isAllowed };
 })();
 
-window.LICENSE = null; // заполняется при загрузке JSON
+window.LICENSE = null; // заполняется при загрузке JSON или из localStorage
+
+// ── Восстановить сохранённую лицензию при старте ────────────────────────
+(function() {
+  try {
+    var saved = localStorage.getItem('pm_license_block');
+    if (!saved) return;
+    var json = JSON.parse(saved);
+    LicenseManager.validate(json).then(function(lic) {
+      if (lic.status === 'valid' || lic.status === 'grace') {
+        window.LICENSE = lic;
+        _applyLicenseUI(lic);
+        _renderLicKeyStatus(lic);
+      } else {
+        // истекла — показываем оверлей, но даём скачать
+        if (lic.status === 'expired') {
+          window.LICENSE = lic;
+          _applyLicenseUI(lic);
+          _renderLicKeyStatus(lic);
+        } else {
+          localStorage.removeItem('pm_license_block');
+        }
+      }
+    });
+  } catch(e) {}
+})();
+
+// ── Применить лицензию из поля ввода ────────────────────────────────────
+window.applyLicenseKeyFromInput = function() {
+  var input = document.getElementById('licKeyInput');
+  if (!input) return;
+  var raw = input.value.trim();
+  if (!raw) {
+    if (typeof showToast === 'function') showToast('Вставьте блок лицензии', 'warn');
+    return;
+  }
+  var json;
+  try { json = JSON.parse(raw); }
+  catch(e) {
+    if (typeof showToast === 'function') showToast('Неверный формат JSON', 'err');
+    return;
+  }
+  // Принимаем и {"license":{...}} и сразу объект лицензии
+  if (json.client && json.plan && json.key && !json.license) {
+    json = { license: json };
+  }
+  if (!json.license) {
+    if (typeof showToast === 'function') showToast('Блок "license" не найден', 'err');
+    return;
+  }
+  LicenseManager.validate(json).then(function(lic) {
+    if (lic.status === 'invalid' || lic.status === 'none') {
+      if (typeof showToast === 'function') showToast('Ключ недействителен', 'err');
+      _renderLicKeyStatus({ status: 'invalid' });
+      return;
+    }
+    if (lic.status === 'expired') {
+      if (typeof showToast === 'function') showToast('Ключ действителен, но срок истёк', 'warn');
+    } else {
+      if (typeof showToast === 'function') showToast('Лицензия активирована: ' + lic.client, 'ok');
+    }
+    // Сохраняем в localStorage
+    try { localStorage.setItem('pm_license_block', JSON.stringify({ license: json.license })); } catch(e) {}
+
+    window.LICENSE = lic;
+
+    // Если уже загружены данные — применяем немедленно
+    _applyLicenseUI(lic);
+    _renderLicKeyStatus(lic);
+
+    // Убираем оверлей если он висел
+    var overlay = document.getElementById('licOverlay');
+    if (overlay && (lic.status === 'valid' || lic.status === 'grace')) overlay.remove();
+    var banner = document.getElementById('licTrialBanner');
+    if (banner) banner.remove();
+    if (lic.status === 'valid' || lic.status === 'grace') _applyLicenseUI(lic);
+
+    // Очищаем поле
+    input.value = '';
+    input.style.height = '';
+  });
+};
+
+// ── Отобразить статус ключа рядом с полем ────────────────────────────────
+function _renderLicKeyStatus(lic) {
+  var el = document.getElementById('licKeyStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  var map = {
+    valid:   { bg:'var(--green-bg)',   border:'#A7F3D0', color:'var(--green-dark)',  text: lic.plan === 'full' ? '✅ Full' : ('✅ Trial · ' + (lic.daysLeft||0) + ' дн.') },
+    grace:   { bg:'#FFF7ED',          border:'#FED7AA', color:'#C2410C',            text: '⚠️ Grace ' + (lic.daysPast||0) + '/3 дн.' },
+    expired: { bg:'var(--red-bg)',     border:'#FCA5A5', color:'var(--red)',         text: '🔒 Истекла' },
+    invalid: { bg:'var(--red-bg)',     border:'#FCA5A5', color:'var(--red)',         text: '❌ Неверный ключ' },
+  };
+  var s = map[lic.status] || map.invalid;
+  el.innerHTML = '<span style="display:inline-flex;align-items:center;padding:4px 10px;background:' + s.bg + ';border:1px solid ' + s.border + ';border-radius:99px;font-size:var(--fz-xs);font-weight:700;color:' + s.color + ';white-space:nowrap">' + s.text + '</span>';
+}
 
 // ===== GLOBAL ERROR LOGGER =====
 (function() {
@@ -2640,8 +2736,19 @@ function _doLoadJsonFile(file, afterLoad) {
         window.LICENSE = lic;
 
         if (lic.status === 'none' || lic.status === 'invalid') {
-          showToast('Файл не содержит действующей лицензии', 'err');
-          return; // не загружаем
+          // Если нет лицензии в файле — проверим localStorage
+          var savedLic = window.LICENSE;
+          if (!savedLic || (savedLic.status !== 'valid' && savedLic.status !== 'grace')) {
+            showToast('Файл не содержит действующей лицензии', 'err');
+            return;
+          }
+          // Есть сохранённая лицензия — грузим данные с ней
+          lic = savedLic;
+        } else {
+          // Сохраняем лицензию из файла в localStorage
+          if (json.license) {
+            try { localStorage.setItem('pm_license_block', JSON.stringify({ license: json.license })); } catch(e) {}
+          }
         }
 
         // Загружаем данные
@@ -2662,6 +2769,7 @@ function _doLoadJsonFile(file, afterLoad) {
 
         // Применяем UI лицензии
         _applyLicenseUI(lic);
+        _renderLicKeyStatus(lic);
       });
 
     } catch(err) { showToast('Ошибка чтения JSON: ' + err.message, 'err'); }

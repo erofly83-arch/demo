@@ -190,6 +190,26 @@
 <input accept=".xlsx,.xls,.csv" id="obrFileInputMyPrice" type="file"/>
 <input accept=".json" id="obrJsonUploadInput" type="file"/>
 </div>
+<!-- ═══ LICENSE KEY INPUT ═══ -->
+<div id="licKeyBar" style="padding:8px 14px 0;display:flex;align-items:flex-start;gap:8px;">
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:var(--fz-xs);font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">
+      Лицензионный ключ
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <textarea id="licKeyInput" rows="1"
+        placeholder='Вставьте блок {"license":{...}} полученный от разработчика'
+        style="flex:1;padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:var(--fz-sm);font-family:'Inter',sans-serif;resize:none;outline:none;line-height:1.5;overflow:hidden;transition:border-color 150ms,box-shadow 150ms;background:var(--surface);"
+        oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"
+        onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 2px rgba(59,111,212,.12)'"
+        onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
+      <button class="btn btn-success" onclick="applyLicenseKeyFromInput()" style="flex-shrink:0;height:32px;">
+        <i data-lucide="key"></i> Применить
+      </button>
+    </div>
+  </div>
+  <div id="licKeyStatus" style="display:none;flex-shrink:0;align-self:flex-end;padding-bottom:2px;"></div>
+</div>
 <!-- ═══ UPLOAD HEADER BAR ═══ -->
 <div class="obr-upload-header" id="obrUploadHeader">
 <div class="obr-upload-btns">
