@@ -8,6 +8,77 @@ const BRAND_CONFIG_SAVED = {};
 // ── GAS прокси (общий для логгера ошибок и формы обратной связи) ──
 const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbx83p3j8SbXGjTCyEXNsfBCH9Np2G-2R00ZMlUP0jzIjjvXnMtQ6tAux0Hpt6nNrh_n/exec';
 
+// ===== LICENSE MANAGER =====
+var LicenseManager = (function() {
+  var GRACE_DAYS = 3;
+
+  function _secret() {
+    return ['PrMgr','_S3cr','3t','_K3y','!26_v','1'].join('');
+  }
+
+  // HMAC-SHA256 через SubtleCrypto
+  async function _hmac(client, plan, expires) {
+    var enc = new TextEncoder();
+    var key = await crypto.subtle.importKey(
+      'raw', enc.encode(_secret()),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    var sig = await crypto.subtle.sign('HMAC', key, enc.encode(client + '|' + plan + '|' + expires));
+    return Array.from(new Uint8Array(sig)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  // Кол-во дней от сегодня до даты (отрицательное если прошло)
+  function _daysUntil(dateStr) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var exp   = new Date(dateStr); exp.setHours(0,0,0,0);
+    return Math.round((exp - today) / 86400000);
+  }
+
+  // Валидация лицензии из JSON-объекта
+  // Возвращает Promise<{ status, plan, client, daysLeft, raw }>
+  // status: 'valid' | 'expired' | 'grace' | 'invalid' | 'none'
+  async function validate(json) {
+    if (!json || !json.license) return { status: 'none' };
+    var lic = json.license;
+    if (!lic.client || !lic.plan || !lic.expires || !lic.key) return { status: 'invalid' };
+
+    // Проверяем подпись
+    var expected;
+    try { expected = await _hmac(lic.client, lic.plan, lic.expires); }
+    catch(e) { return { status: 'invalid' }; }
+    if (expected !== lic.key) return { status: 'invalid' };
+
+    var daysLeft = _daysUntil(lic.expires);
+
+    if (daysLeft >= 0) {
+      return { status: 'valid', plan: lic.plan, client: lic.client, daysLeft: daysLeft, raw: lic };
+    } else {
+      var daysPast = -daysLeft;
+      if (daysPast <= GRACE_DAYS) {
+        return { status: 'grace', plan: lic.plan, client: lic.client, daysLeft: daysLeft, daysPast: daysPast, raw: lic };
+      } else {
+        return { status: 'expired', plan: lic.plan, client: lic.client, daysLeft: daysLeft, raw: lic };
+      }
+    }
+  }
+
+  // Можно ли использовать фичу?
+  // features: 'export' (Excel/ZIP), 'copy' (выделение текста таблицы)
+  function isAllowed(feature) {
+    var lic = window.LICENSE;
+    if (!lic) return false;
+    // expired без grace — ничего нельзя, КРОМЕ скачивания JSON
+    if (lic.status === 'expired') return feature === 'downloadJson';
+    // trial — экспорт и копирование таблицы заблокированы
+    if (lic.plan === 'trial' && (feature === 'export' || feature === 'copy')) return false;
+    return true;
+  }
+
+  return { validate: validate, isAllowed: isAllowed };
+})();
+
+window.LICENSE = null; // заполняется при загрузке JSON
+
 // ===== GLOBAL ERROR LOGGER =====
 (function() {
   var _errs = [];
@@ -2563,22 +2634,36 @@ function _doLoadJsonFile(file, afterLoad) {
   reader.onload = function(ev) {
     try {
       const json = JSON.parse(ev.target.result);
-      // Используем централизованную функцию — она обновляет ВСЕ параметры из JSON
-      if (typeof applyJsonToState === 'function') {
-        applyJsonToState(json, file.name);
-      } else {
-        // Fallback: прямой trigger (старый путь)
-        AppBridge.emit('settingsLoaded', json);
-        const synInp = document.getElementById('synonymsInput');
-        if (synInp) {
-          const dt = new DataTransfer();
-          dt.items.add(file);
-          synInp.files = dt.files;
-          synInp.dispatchEvent(new Event('change', { bubbles: true }));
+
+      // ── Проверяем лицензию ──────────────────────────────────
+      LicenseManager.validate(json).then(function(lic) {
+        window.LICENSE = lic;
+
+        if (lic.status === 'none' || lic.status === 'invalid') {
+          showToast('Файл не содержит действующей лицензии', 'err');
+          return; // не загружаем
         }
-      }
-      if (typeof afterLoad === 'function') afterLoad();
-      if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+
+        // Загружаем данные
+        if (typeof applyJsonToState === 'function') {
+          applyJsonToState(json, file.name);
+        } else {
+          AppBridge.emit('settingsLoaded', json);
+          const synInp = document.getElementById('synonymsInput');
+          if (synInp) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            synInp.files = dt.files;
+            synInp.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+        if (typeof afterLoad === 'function') afterLoad();
+        if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+
+        // Применяем UI лицензии
+        _applyLicenseUI(lic);
+      });
+
     } catch(err) { showToast('Ошибка чтения JSON: ' + err.message, 'err'); }
   };
   reader.readAsText(file, 'utf-8');
@@ -8595,3 +8680,219 @@ setTimeout(function() {
 })();
 
 
+
+// ===== LICENSE UI =====
+function _applyLicenseUI(lic) {
+  _applyLicenseRestrictions(lic);
+  _renderLicenseSidebar(lic);
+
+  if (lic.status === 'expired') {
+    _showLicenseOverlay(lic, false); // нет grace — полный блок
+  } else if (lic.status === 'grace') {
+    _showLicenseOverlay(lic, true);  // grace — с предупреждением, доступ есть
+  } else if (lic.status === 'valid' && lic.plan === 'trial') {
+    _showTrialBanner(lic);
+  }
+}
+
+// ── Блокировка/разблокировка кнопок экспорта ──────────────────────────────
+function _applyLicenseRestrictions(lic) {
+  var canExport = LicenseManager.isAllowed('export');
+
+  // Excel/ZIP кнопки мониторинга
+  ['exportMyPriceBtn','exportAllBtn','exportCurrentBtn','obrHeaderArchiveBtn','jeExportXlsxBtn'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    if (!canExport) {
+      btn.disabled = true;
+      btn.title = 'Недоступно в Trial — перейдите на Full';
+      btn.setAttribute('data-lic-locked', '1');
+    } else {
+      if (btn.getAttribute('data-lic-locked')) {
+        btn.disabled = false;
+        btn.removeAttribute('data-lic-locked');
+      }
+    }
+  });
+
+  // user-select на таблице в trial
+  var mainWrap = document.getElementById('mainTableWrap');
+  if (mainWrap) {
+    mainWrap.style.userSelect = canExport ? '' : 'none';
+    mainWrap.style.webkitUserSelect = canExport ? '' : 'none';
+  }
+}
+
+// ── Счётчик в сайдбаре ────────────────────────────────────────────────────
+function _renderLicenseSidebar(lic) {
+  // Убираем старый блок если есть
+  var old = document.getElementById('licSidebarBlock');
+  if (old) old.remove();
+
+  var footer = document.querySelector('.sidebar-footer');
+  if (!footer) return;
+
+  var block = document.createElement('div');
+  block.id = 'licSidebarBlock';
+  block.style.cssText = 'padding:8px 12px 6px;border-top:1px solid var(--border);margin-top:4px';
+
+  if (lic.status === 'valid' && lic.plan === 'full') {
+    block.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--green-bg);border:1px solid #A7F3D0;border-radius:var(--radius-md)">'
+      + '<span style="font-size:12px">✅</span>'
+      + '<div style="font-size:10px;color:var(--green-dark);line-height:1.3">'
+      + '<div style="font-weight:700">Лицензия активна</div>'
+      + '<div style="opacity:.8">' + _escHtml(lic.client) + '</div>'
+      + '</div></div>';
+  } else if (lic.status === 'valid' && lic.plan === 'trial') {
+    var days = lic.daysLeft;
+    var color = days <= 5 ? 'var(--red)' : 'var(--amber)';
+    block.innerHTML = '<div style="padding:7px 10px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-md)">'
+      + '<div style="font-size:18px;font-weight:700;color:' + color + ';line-height:1.1">' + days + ' ' + _pluralDays(days) + '</div>'
+      + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px">Trial · осталось до конца</div>'
+      + '<div style="font-size:10px;color:var(--text-secondary);margin-top:5px">Для продления:</div>'
+      + '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
+      + '<a href="tel:+79130998250" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:600">📞 Позвонить</a>'
+      + '<span style="color:var(--text-muted);font-size:10px">·</span>'
+      + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:600">✈️ Telegram</a>'
+      + '</div></div>';
+  } else if (lic.status === 'grace') {
+    block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--red)">⚠️ Лицензия истекла</div>'
+      + '<div style="font-size:10px;color:var(--red);margin-top:2px">Grace-период: ' + lic.daysPast + '/' + 3 + ' дн.</div>'
+      + '</div>';
+  }
+
+  footer.prepend(block);
+}
+
+// ── Баннер для trial ──────────────────────────────────────────────────────
+function _showTrialBanner(lic) {
+  if (document.getElementById('licTrialBanner')) return;
+  var main = document.querySelector('.app-main');
+  if (!main) return;
+  var days = lic.daysLeft;
+  var banner = document.createElement('div');
+  banner.id = 'licTrialBanner';
+  banner.style.cssText = 'background:var(--amber-bg);border-bottom:1px solid #FDE68A;padding:7px 20px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--amber-dark);flex-wrap:wrap';
+  banner.innerHTML = '<span style="font-weight:700">⏳ Trial-лицензия — осталось ' + days + ' ' + _pluralDays(days) + '</span>'
+    + '<span>Экспорт Excel и ZIP недоступен.</span>'
+    + '<span style="margin-left:auto;display:flex;gap:10px">'
+    + '<a href="tel:+79130998250" style="color:var(--accent);font-weight:600;text-decoration:none">📞 +7 913 099-82-50</a>'
+    + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="color:var(--accent);font-weight:600;text-decoration:none">✈️ Telegram</a>'
+    + '</span>';
+  main.prepend(banner);
+}
+
+// ── Оверлей при истечении ─────────────────────────────────────────────────
+function _showLicenseOverlay(lic, isGrace) {
+  if (document.getElementById('licOverlay')) return;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'licOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var days = isGrace ? (3 - lic.daysPast) : 0;
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:12px;padding:32px 28px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;font-family:Inter,sans-serif';
+
+  var titleColor = isGrace ? '#D97706' : '#DC2626';
+  var title      = isGrace
+    ? ('⏳ Лицензия истекает — осталось ' + days + ' ' + _pluralDays(days))
+    : '🔒 Срок лицензии истёк';
+  var subtitle   = isGrace
+    ? 'Приложение работает в льготном режиме. Продлите лицензию, чтобы не потерять доступ.'
+    : 'Для продолжения работы необходимо продлить лицензию. Скачать данные можно по кнопке ниже.';
+
+  box.innerHTML = '<div style="font-size:24px;font-weight:800;color:' + titleColor + ';margin-bottom:8px">' + title + '</div>'
+    + '<div style="font-size:14px;color:#6B7280;margin-bottom:24px;line-height:1.5">' + subtitle + '</div>'
+    + '<div style="background:#F4F5F7;border-radius:8px;padding:16px;margin-bottom:20px">'
+    + '<div style="font-size:13px;font-weight:600;color:#1A1D23;margin-bottom:12px">Свяжитесь для продления:</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px">'
+    + '<a href="tel:+79130998250" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:#EEF2FF;border:1px solid #C7D7F5;border-radius:6px;color:#3B6FD4;font-weight:700;font-size:14px;text-decoration:none">📞 +7 913 099-82-50</a>'
+    + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;color:#2D5AB5;font-weight:700;font-size:14px;text-decoration:none">✈️ Написать в Telegram</a>'
+    + '</div></div>';
+
+  // Форма обратной связи
+  var form = document.createElement('div');
+  form.style.cssText = 'margin-bottom:16px;text-align:left';
+  form.innerHTML = '<div style="font-size:12px;font-weight:700;color:#1A1D23;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Ваш контакт (телефон или Telegram)</div>'
+    + '<input id="licOverlayContact" type="text" placeholder="+7 913 ... или @username"'
+    + ' style="width:100%;padding:8px 10px;border:1px solid #9AA3B2;border-radius:6px;font-size:13px;font-family:Inter,sans-serif;margin-bottom:8px;box-sizing:border-box">'
+    + '<div style="font-size:12px;font-weight:700;color:#1A1D23;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Сообщение</div>'
+    + '<textarea id="licOverlayMsg" rows="2" placeholder="Хочу продлить лицензию..."'
+    + ' style="width:100%;padding:8px 10px;border:1px solid #9AA3B2;border-radius:6px;font-size:13px;font-family:Inter,sans-serif;resize:none;box-sizing:border-box"></textarea>'
+    + '<button onclick="_licOverlaySend()" style="margin-top:8px;width:100%;padding:10px;background:#3B6FD4;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">Отправить сообщение</button>';
+  box.appendChild(form);
+
+  // Кнопка скачать JSON (доступна всегда)
+  var dlBtn = document.createElement('button');
+  dlBtn.textContent = '⬇ Скачать данные (JSON)';
+  dlBtn.style.cssText = 'width:100%;padding:9px;background:#fff;border:1px solid #9AA3B2;border-radius:6px;font-size:13px;color:#1A1D23;cursor:pointer;font-family:Inter,sans-serif;font-weight:500';
+  dlBtn.onclick = function() {
+    if (typeof downloadCurrentSynonyms === 'function') downloadCurrentSynonyms();
+    else if (typeof window.downloadCurrentSynonyms === 'function') window.downloadCurrentSynonyms();
+  };
+  box.appendChild(dlBtn);
+
+  // Grace — кнопка продолжить
+  if (isGrace) {
+    var cont = document.createElement('button');
+    cont.textContent = 'Продолжить работу (Grace-период)';
+    cont.style.cssText = 'margin-top:8px;width:100%;padding:9px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;font-size:12px;color:#92400E;cursor:pointer;font-family:Inter,sans-serif';
+    cont.onclick = function() { overlay.remove(); };
+    box.appendChild(cont);
+  }
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  // Предзаполнить контакт если уже есть
+  setTimeout(function() {
+    var ci = document.getElementById('licOverlayContact');
+    if (ci && window._userContact) ci.value = window._userContact;
+  }, 50);
+}
+
+window._licOverlaySend = function() {
+  var contact = (document.getElementById('licOverlayContact') || {}).value || '';
+  var msg     = (document.getElementById('licOverlayMsg')     || {}).value || '';
+  contact = contact.trim(); msg = msg.trim();
+
+  if (!contact) {
+    alert('Укажите контакт (телефон или Telegram)');
+    return;
+  }
+
+  // Сохраняем контакт
+  window._userContact = contact;
+  try { localStorage.setItem('userContact', contact); } catch(e) {}
+
+  var text = '🔒 Запрос продления лицензии\n'
+    + 'Дата: ' + new Date().toLocaleString('ru') + '\n'
+    + 'Контакт: ' + contact + '\n'
+    + (msg ? '────────────────────\n' + msg : '');
+
+  fetch(GAS_PROXY_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text })
+  }).then(function() {
+    var btn = document.querySelector('#licOverlay button[onclick="_licOverlaySend()"]');
+    if (btn) { btn.textContent = '✓ Отправлено!'; btn.disabled = true; }
+  }).catch(function() {});
+};
+
+// ── Утилиты ───────────────────────────────────────────────────────────────
+function _pluralDays(n) {
+  var abs = Math.abs(n);
+  if (abs % 100 >= 11 && abs % 100 <= 14) return 'дней';
+  switch (abs % 10) {
+    case 1: return 'день';
+    case 2: case 3: case 4: return 'дня';
+    default: return 'дней';
+  }
+}
+function _escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
