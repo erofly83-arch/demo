@@ -8916,12 +8916,27 @@ setTimeout(function() {
     }
 
     var ua = (navigator.userAgent.match(/(Chrome|Firefox|Safari|Edge)\/[\d.]+/) || [''])[0];
+    var _lic = window.LICENSE;
+    var _raw = (_lic && _lic.raw) ? _lic.raw : null;
+    var _licLines = '';
+    if (_lic && _lic.status !== 'none' && _lic.status !== 'invalid') {
+      if (_lic.client)            _licLines += 'Организация: '   + _lic.client + '\n';
+      if (_raw && _raw.phone)     _licLines += 'Телефон: '       + _raw.phone  + '\n';
+      if (_raw && _raw.contact)   _licLines += 'Контакт: '       + _raw.contact + '\n';
+      if (_lic.plan)              _licLines += 'Тариф: '         + _lic.plan.toUpperCase() + '\n';
+      if (_raw && _raw.expires)   _licLines += 'Действует до: '  + _raw.expires + '\n';
+      if (_lic.daysLeft !== undefined && _lic.daysLeft >= 0)
+                                  _licLines += 'Осталось: '      + _lic.daysLeft + ' дн.\n';
+      if (_lic.status === 'grace')_licLines += 'Статус: grace (просроченная, период доступа)\n';
+      else if (_lic.status === 'expired') _licLines += 'Статус: ИСТЕКЛА\n';
+    }
     var text = '📩 Сообщение от пользователя\n'
       + 'Дата: ' + new Date().toLocaleString('ru') + '\n'
       + 'UA: ' + (ua || navigator.userAgent.slice(0, 40)) + '\n'
-      + (contact ? 'Контакт: ' + contact + '\n' : '')
-      + (_imgName  ? 'Изображение: ' + _imgName + '\n' : '')
+      + (contact ? 'Контакт (форма): ' + contact + '\n' : '')
+      + (_licLines ? '─── Лицензия ─────────────────────\n' + _licLines : '')
       + '─────────────────────────────────\n'
+      + (_imgName  ? '📎 ' + _imgName + '\n' : '')
       + msg;
 
     if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Отправка…'; }
