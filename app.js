@@ -158,6 +158,7 @@ window.applyLicenseKeyFromInput = function() {
     // Применяем UI (один раз)
     _applyLicenseUI(lic);
     _renderLicKeyStatus(lic);
+    if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
 
     // Очищаем поле
     input.value = '';
@@ -2683,7 +2684,9 @@ function _isJsonLoaded() {
 
 // ── Блокировка/разблокировка карточек загрузки прайсов ───────────────────
 function _updatePriceCardsLock() {
-  var locked = !_isJsonLoaded();
+  // Карточки разблокированы если загружен JSON-файл ИЛИ есть действующая лицензия
+  var hasLic = window.LICENSE && (window.LICENSE.status === 'valid' || window.LICENSE.status === 'grace');
+  var locked = !_isJsonLoaded() && !hasLic;
   var ids = ['obrClearedFileInput', 'obrClearedFileInputMyPrice'];
   var cards = ['obrHeaderMyPriceCard', 'obrHeaderSupplierCard'];
   var hintId = '_priceCardsHint';
@@ -2698,7 +2701,7 @@ function _updatePriceCardsLock() {
     if (locked) {
       el.style.opacity = '0.45';
       el.style.pointerEvents = 'none';
-      el.title = 'Сначала загрузите файл памяти';
+      el.title = 'Сначала загрузите файл памяти или введите лицензионный ключ';
     } else {
       el.style.opacity = '';
       el.style.pointerEvents = '';
@@ -8816,22 +8819,55 @@ function _applyLicenseUI(lic) {
   }
 }
 
+// ── Перехватчик кликов по заблокированным кнопкам экспорта (один раз) ─────
+(function() {
+  var _licClickHandlerAttached = false;
+  window._attachLicClickInterceptor = function() {
+    if (_licClickHandlerAttached) return;
+    _licClickHandlerAttached = true;
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-lic-locked]');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (typeof showToast === 'function') {
+        showToast('Экспорт недоступен в Trial-версии — перейдите на Full', 'warn');
+      }
+    }, true); // capture = true — перехватываем до штатного обработчика
+  };
+})();
+
 // ── Блокировка/разблокировка кнопок экспорта ──────────────────────────────
 function _applyLicenseRestrictions(lic) {
   var canExport = LicenseManager.isAllowed('export');
 
-  // Excel/ZIP кнопки мониторинга
-  ['exportMyPriceBtn','exportAllBtn','exportCurrentBtn','obrHeaderArchiveBtn','jeExportXlsxBtn'].forEach(function(id) {
+  // Подключаем перехватчик кликов один раз
+  if (typeof window._attachLicClickInterceptor === 'function') {
+    window._attachLicClickInterceptor();
+  }
+
+  // Excel/ZIP кнопки — не disabled, только визуально заблокированы
+  var EXPORT_BTNS = [
+    'exportMyPriceBtn', 'exportAllBtn', 'exportCurrentBtn',
+    'obrHeaderArchiveBtn', 'jeExportXlsxBtn', 'monitorDownloadArchiveBtn'
+  ];
+  EXPORT_BTNS.forEach(function(id) {
     var btn = document.getElementById(id);
     if (!btn) return;
     if (!canExport) {
-      btn.disabled = true;
-      btn.title = 'Недоступно в Trial — перейдите на Full';
       btn.setAttribute('data-lic-locked', '1');
+      btn.title = 'Недоступно в Trial — перейдите на Full';
+      // Визуальное приглушение: серый цвет текста + курсор
+      btn.style.opacity   = '0.45';
+      btn.style.cursor    = 'not-allowed';
+      btn.style.filter    = 'grayscale(0.6)';
     } else {
       if (btn.getAttribute('data-lic-locked')) {
-        btn.disabled = false;
         btn.removeAttribute('data-lic-locked');
+        btn.style.opacity = '';
+        btn.style.cursor  = '';
+        btn.style.filter  = '';
+        btn.title         = '';
       }
     }
   });
