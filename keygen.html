@@ -45,7 +45,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
 .header-sub{font-size:10px;color:var(--text-secondary)}
 .app-header-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 
-.main-layout{display:grid;grid-template-columns:1fr 420px;min-height:calc(100vh - 57px)}
+.main-layout{display:grid;grid-template-columns:1fr 504px;min-height:calc(100vh - 57px)}
 .left-panel{padding:20px;border-right:1px solid var(--border)}
 .right-panel{padding:20px;display:flex;flex-direction:column;gap:16px;background:var(--surface-alt)}
 
@@ -215,6 +215,14 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
           </div>
         </div>
 
+        <div id="trialPresets" class="btn-row" style="margin-bottom:10px">
+          <span style="font-size:var(--fz-xs);color:var(--text-secondary);align-self:center;white-space:nowrap">Срок trial:</span>
+          <button class="btn btn-sm" onclick="setTrialDays(3)">3 дня</button>
+          <button class="btn btn-sm" onclick="setTrialDays(7)">7 дней</button>
+          <button class="btn btn-sm" onclick="setTrialDays(14)">14 дней</button>
+          <button class="btn btn-sm" onclick="setTrialDays(30)">30 дней</button>
+        </div>
+
         <div class="form-row">
           <div class="field" style="margin-bottom:0">
             <label>Дата выдачи</label>
@@ -225,6 +233,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
             <input type="date" id="fExpires">
           </div>
         </div>
+
       </div>
 
       <div class="container">
@@ -415,12 +424,23 @@ function selectPlan(plan) {
   document.getElementById('cardTrial').classList.toggle('selected', plan === 'trial');
   document.getElementById('cardFull').classList.toggle('selected', plan === 'full');
   document.querySelector(`input[value="${plan}"]`).checked = true;
+  const presets = document.getElementById('trialPresets');
   if (plan === 'full') {
     document.getElementById('fExpires').value = '2099-12-31';
+    if (presets) presets.style.display = 'none';
   } else {
     const ny = new Date(); ny.setFullYear(ny.getFullYear() + 1);
     document.getElementById('fExpires').value = fmtDate(ny);
+    if (presets) presets.style.display = 'flex';
   }
+}
+
+function setTrialDays(days) {
+  const issued = document.getElementById('fIssued').value || fmtDate(new Date());
+  document.getElementById('fIssued').value = issued;
+  const base = new Date(issued);
+  base.setDate(base.getDate() + days);
+  document.getElementById('fExpires').value = fmtDate(base);
 }
 
 // ═══════════════════════════════════════════════════
@@ -701,6 +721,20 @@ function loadFromHistory(i) {
   document.getElementById('fIssued').value  = rec.issued;
   document.getElementById('fExpires').value = rec.expires;
   selectPlan(rec.plan);
+
+  // Загружаем ключ в панель результата
+  if (rec.key) {
+    const licBlock = { client: rec.client, plan: rec.plan, issued: rec.issued, expires: rec.expires, key: rec.key };
+    if (rec.contact) licBlock.contact = rec.contact;
+    const badge = document.getElementById('resultBadge');
+    badge.className = 'badge ' + (rec.plan === 'full' ? 'badge-full' : 'badge-trial');
+    badge.textContent = rec.plan.toUpperCase();
+    document.getElementById('resultCode').textContent = JSON.stringify({ license: licBlock }, null, 2);
+    document.getElementById('btnCopy').disabled = false;
+    document.getElementById('downloadBtns').style.display = 'flex';
+    _lastGenerated = { json: { license: licBlock }, client: rec.client, plan: rec.plan, issued: rec.issued, expires: rec.expires, comment: rec.comment || '', contact: rec.contact || '', key: rec.key, ts: rec.ts };
+  }
+
   toast('Загружено: ' + rec.client, 'ok');
 }
 
