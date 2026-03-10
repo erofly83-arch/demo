@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Прайс-менеджер · Лицензии</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F5F7;--surface:#FFFFFF;--surface-alt:#FAFAFA;
+  --border:#C8CDD8;--border-strong:#9AA3B2;
+  --text-primary:#1A1D23;--text-secondary:#6B7280;--text-muted:#9CA3AF;
+  --accent:#3B6FD4;--accent-dark:#2D5AB5;--accent-bg:#EEF2FF;--accent-lite:#F0F4FF;
+  --green:#16A34A;--green-bg:#F0FDF4;--green-dark:#15803D;
+  --red:#DC2626;--red-bg:#FFF1F2;
+  --amber:#D97706;--amber-bg:#FFFBEB;--amber-dark:#92400E;
+  --radius:4px;--radius-md:6px;--radius-lg:8px;
+  --fz-xs:10px;--fz-sm:11px;--fz-md:12px;--fz-base:13px;--fz-lg:14px;--fz-xl:16px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.06);--shadow-modal:0 8px 32px rgba(0,0,0,0.18);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Inter',sans-serif;font-size:var(--fz-base);background:var(--bg);color:var(--text-primary);line-height:1.5;-webkit-font-smoothing:antialiased}
+input,select,textarea,button{font-family:'Inter',sans-serif}
+
+/* ── AUTH ── */
+#authScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px 32px;width:340px;box-shadow:var(--shadow-modal);text-align:center}
+.auth-brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px}
+.brand-icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-icon svg{width:14px;height:14px;fill:#fff}
+.brand-name{font-size:var(--fz-md);font-weight:700;color:var(--text-primary)}
+.auth-title{font-size:var(--fz-xl);font-weight:700;margin-bottom:4px}
+.auth-sub{font-size:var(--fz-sm);color:var(--text-secondary);margin-bottom:20px}
+.auth-input{width:100%;padding:9px 12px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:22px;letter-spacing:8px;text-align:center;background:var(--surface);color:var(--text-primary);outline:none;transition:border-color 150ms,box-shadow 150ms;margin-bottom:10px}
+.auth-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(59,111,212,.12)}
+.auth-err{font-size:var(--fz-xs);color:var(--red);min-height:16px;margin-bottom:8px}
+
+/* ── LAYOUT ── */
+#app{display:none;min-height:100vh}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;gap:12px}
+.app-header-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.header-title{font-size:var(--fz-md);font-weight:700;line-height:1.2}
+.header-sub{font-size:10px;color:var(--text-secondary)}
+.app-header-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+.main-layout{display:grid;grid-template-columns:1fr 420px;min-height:calc(100vh - 57px)}
+.left-panel{padding:20px;border-right:1px solid var(--border)}
+.right-panel{padding:20px;display:flex;flex-direction:column;gap:16px;background:var(--surface-alt)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--surface);color:var(--text-primary);font-size:var(--fz-md);font-weight:500;white-space:nowrap;cursor:pointer;height:32px;transition:background 100ms,border-color 100ms,color 100ms}
+.btn:hover:not(:disabled){background:var(--accent-lite);border-color:var(--accent);color:var(--accent)}
+.btn:active:not(:disabled){transform:scale(0.98)}
+.btn:disabled{opacity:1!important;background:var(--surface-alt)!important;color:#9CA3AF!important;border-color:var(--border)!important;cursor:not-allowed}
+.btn-success{background:var(--accent);color:#fff;border-color:var(--accent-dark)}
+.btn-success:hover:not(:disabled){background:var(--accent-dark)!important;color:#fff!important;border-color:var(--accent-dark)!important}
+.btn-sm{height:26px;font-size:var(--fz-xs);padding:3px 10px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── SECTION LABELS ── */
+.section-label{font-size:var(--fz-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-secondary);margin-bottom:10px}
+
+/* ── CONTAINER ── */
+.container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+.container:last-child{margin-bottom:0}
+
+/* ── FIELDS ── */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:var(--fz-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
+.field input,.field select{padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:var(--fz-base);background:var(--surface);color:var(--text-primary);outline:none;transition:border-color 150ms,box-shadow 150ms}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(59,111,212,.12)}
+.field .hint{font-size:var(--fz-xs);color:var(--text-muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── PLAN CARDS ── */
+.plan-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.plan-card{border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:10px 12px;cursor:pointer;transition:all 100ms;position:relative;user-select:none}
+.plan-card input[type=radio]{position:absolute;opacity:0;pointer-events:none}
+.plan-card:hover{background:var(--accent-lite);border-color:var(--accent)}
+.plan-card.selected{background:var(--accent-bg);border-color:var(--accent);border-width:2px}
+.plan-card-name{font-size:var(--fz-base);font-weight:700;margin-bottom:2px}
+.plan-card.selected .plan-card-name{color:var(--accent-dark)}
+.plan-card-desc{font-size:var(--fz-xs);color:var(--text-secondary);line-height:1.4}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:1px dashed var(--border-strong);border-radius:var(--radius-md);padding:14px;text-align:center;cursor:pointer;position:relative;transition:all 100ms;background:var(--surface-alt)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--accent-lite)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-zone-text{font-size:var(--fz-sm);color:var(--text-secondary);line-height:1.5}
+.upload-zone-name{font-size:var(--fz-xs);color:var(--green);font-weight:600;margin-top:4px}
+
+/* ── RESULT ── */
+.result-box{background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
+.result-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border)}
+.result-header-title{font-size:var(--fz-xs);font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px}
+.result-code{font-family:'Courier New',monospace;font-size:11px;color:var(--text-primary);padding:12px;white-space:pre;overflow-x:auto;line-height:1.65;max-height:220px;overflow-y:auto}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:var(--fz-xs);font-weight:700}
+.badge-trial{background:var(--amber-bg);color:var(--amber-dark);border:1px solid #FDE68A}
+.badge-full{background:var(--green-bg);color:var(--green-dark);border:1px solid #A7F3D0}
+.badge-none{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ── TG STATUS ── */
+.tg-status{display:flex;align-items:center;gap:5px;font-size:var(--fz-xs);padding:3px 8px;border-radius:99px;border:1px solid;font-weight:600;white-space:nowrap}
+.tg-status.ok{background:var(--green-bg);color:var(--green-dark);border-color:#A7F3D0}
+.tg-status.warn{background:var(--amber-bg);color:var(--amber-dark);border-color:#FDE68A}
+
+/* ── HISTORY TABLE ── */
+.hist-table{border-collapse:collapse;width:100%;font-size:var(--fz-md)}
+.hist-table thead th{background:var(--surface-alt);padding:6px 10px;text-align:left;font-size:var(--fz-xs);font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid var(--border);white-space:nowrap}
+.hist-table tbody td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.hist-table tbody tr:last-child td{border-bottom:none}
+.hist-table tbody tr:hover td{background:var(--accent-lite)!important}
+.hist-actions{display:flex;gap:4px}
+.hist-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer;font-size:11px;color:var(--text-muted);transition:all 100ms}
+.hist-btn:hover{background:var(--accent-lite);border-color:var(--accent);color:var(--accent)}
+.hist-btn.del:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10000;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-inner{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-modal);width:440px;max-width:96vw;border:1px solid var(--border);overflow:hidden}
+.modal-header{background:var(--surface-alt);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;font-size:var(--fz-lg);font-weight:600;color:var(--text-primary)}
+.modal-close-x{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-secondary);padding:2px 6px;border-radius:var(--radius);line-height:1;transition:background 100ms}
+.modal-close-x:hover{background:#eee}
+.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface-alt)}
+
+/* ── INFO BOX ── */
+.info-box{background:var(--accent-bg);border:1px solid #C7D7F5;border-left:3px solid var(--accent);border-radius:var(--radius-md);padding:8px 12px;font-size:var(--fz-sm);color:var(--text-primary);line-height:1.5}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:4px 0}
+
+/* ── TOASTS ── */
+#toastRack{position:fixed;bottom:20px;right:20px;z-index:99999;display:flex;flex-direction:column-reverse;gap:6px;max-width:380px;pointer-events:none}
+.toast{background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-left:3px solid var(--border-strong);border-radius:var(--radius-md);padding:10px 14px;font-size:var(--fz-base);font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,0.1);opacity:0;transform:translateY(8px) scale(0.98);transition:opacity .18s,transform .18s;pointer-events:auto}
+.toast.show{opacity:1;transform:translateY(0) scale(1)}
+.toast.ok{border-left-color:var(--green)}
+.toast.err{border-left-color:var(--red)}
+.toast.warn{border-left-color:var(--amber)}
+
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-icon"><svg viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h8v2H2z"/></svg></div>
+      <span class="brand-name">Прайс-менеджер</span>
+    </div>
+    <div class="auth-title">Генератор лицензий</div>
+    <div class="auth-sub">Служебный раздел. Введите код доступа.</div>
+    <input type="password" class="auth-input" id="authInput" maxlength="10" placeholder="••••">
+    <div class="auth-err" id="authErr"></div>
+    <button class="btn btn-success" style="width:100%;justify-content:center" onclick="checkAuth()">Войти</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <div class="app-header-left">
+      <div class="brand-icon"><svg viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h8v2H2z"/></svg></div>
+      <div>
+        <div class="header-title">Генератор лицензий</div>
+        <div class="header-sub">Прайс-менеджер · служебный раздел</div>
+      </div>
+    </div>
+    <div class="app-header-right">
+      <button class="btn btn-sm" onclick="saveMemoryFile()">💾 Сохранить память</button>
+      <label class="btn btn-sm" style="cursor:pointer;position:relative">
+        📂 Загрузить память
+        <input type="file" accept=".json" style="position:absolute;inset:0;opacity:0;cursor:pointer" onchange="loadMemoryFile(this)">
+      </label>
+      <div style="width:1px;height:20px;background:var(--border)"></div>
+      <button class="btn btn-sm" onclick="sendHistoryToTg()">📤 История → TG</button>
+      <button class="btn btn-sm" style="color:var(--red);border-color:var(--red)" onclick="clearHistory()">🗑</button>
+    </div>
+  </div>
+
+  <div class="main-layout">
+
+    <!-- LEFT: FORM -->
+    <div class="left-panel">
+      <div class="section-label">Новая лицензия</div>
+
+      <div class="container">
+        <div class="field">
+          <label>Клиент / Компания *</label>
+          <input type="text" id="fClient" placeholder="ООО Ромашка" autocomplete="off">
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div style="font-size:var(--fz-xs);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Тариф</div>
+          <div class="plan-cards">
+            <label class="plan-card selected" id="cardTrial" onclick="selectPlan('trial')">
+              <input type="radio" name="plan" value="trial" checked>
+              <div class="plan-card-name">Trial</div>
+              <div class="plan-card-desc">Экспорт Excel/ZIP заблокирован. Ограничен по сроку.</div>
+            </label>
+            <label class="plan-card" id="cardFull" onclick="selectPlan('full')">
+              <input type="radio" name="plan" value="full">
+              <div class="plan-card-name">Full</div>
+              <div class="plan-card-desc">Полный доступ. Всё разблокировано.</div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field" style="margin-bottom:0">
+            <label>Дата выдачи</label>
+            <input type="date" id="fIssued">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Действует до</label>
+            <input type="date" id="fExpires">
+          </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <div class="field" style="margin-bottom:0">
+          <label>Комментарий <span style="font-weight:400;text-transform:none;letter-spacing:0">(не влияет на ключ)</span></label>
+          <input type="text" id="fComment" placeholder="Проект, заметки...">
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:4px">Файл памяти клиента</div>
+      <div class="upload-zone" id="uploadZone"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleClientFileDrop(event)">
+        <input type="file" accept=".json" onchange="handleClientFileInput(this)">
+        <div style="font-size:20px;margin-bottom:4px">📂</div>
+        <div class="upload-zone-text">
+          Загрузить JSON клиента для продления лицензии<br>
+          <span style="font-size:var(--fz-xs);color:var(--text-muted)">Оставьте пустым — создастся минимальный шаблон</span>
+        </div>
+        <div class="upload-zone-name" id="uploadedFileName"></div>
+      </div>
+
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-success" onclick="generate()">⚡ Сгенерировать</button>
+        <button class="btn" onclick="resetForm()">↺ Сбросить</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULT + HISTORY -->
+    <div class="right-panel">
+
+      <!-- Result -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-label" style="margin-bottom:0">Результат</div>
+          <span id="resultBadge" class="badge badge-none">—</span>
+        </div>
+        <div class="result-box">
+          <div class="result-header">
+            <span class="result-header-title">license block</span>
+            <button class="btn btn-sm" id="btnCopy" onclick="copyResult()" disabled>Копировать</button>
+          </div>
+          <pre class="result-code" id="resultCode">// Заполните форму и нажмите «Сгенерировать»</pre>
+        </div>
+        <div id="downloadBtns" class="btn-row" style="display:none;margin-top:10px">
+          <button class="btn btn-success btn-sm" onclick="downloadJson()">⬇ Скачать JSON</button>
+          <button class="btn btn-sm" onclick="sendJsonToTg()">📨 Отправить в Telegram</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- History -->
+      <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-label" style="margin-bottom:0">История</div>
+          <span id="histCount" style="font-size:var(--fz-xs);color:var(--text-muted)">0 записей</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface)">
+          <table class="hist-table">
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Тариф</th>
+                <th>До</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;font-size:var(--fz-sm)">История пуста</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<div id="toastRack"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwgo0LuPvmAeu2rVODX6KcJKNR-ST9630ZliSS7u5XJtv3-dp2gI0pG34x0JMQJDJk/exec';
+const MEM_KEY  = 'pm_keygen_memory'; // localStorage key for memory
+
+function _secret() { return ['PrMgr','_S3cr','3t','_K3y','!26_v','1'].join(''); }
+
+// ═══════════════════════════════════════════════════
+// MEMORY — единый объект (history + settings)
+// Хранится в localStorage и экспортируется в JSON-файл
+// ═══════════════════════════════════════════════════
+function loadMemory() {
+  try { return JSON.parse(localStorage.getItem(MEM_KEY)) || { version:1, history:[] }; }
+  catch { return { version:1, history:[] }; }
+}
+
+function saveMemory(mem) {
+  localStorage.setItem(MEM_KEY, JSON.stringify(mem));
+}
+
+// Скачать файл памяти генератора
+function saveMemoryFile() {
+  const mem = loadMemory();
+  const blob = new Blob([JSON.stringify(mem, null, 2)], { type:'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const now  = new Date();
+  const date = fmtDate(now);
+  a.href = url;
+  a.download = `keygen_memory_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Файл памяти сохранён', 'ok');
+}
+
+// Загрузить файл памяти генератора
+function loadMemoryFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      // Validate structure
+      if (!data.history || !Array.isArray(data.history)) {
+        toast('Неверный формат файла памяти', 'err'); return;
+      }
+      saveMemory(data);
+      renderHistory();
+      toast(`Память загружена: ${data.history.length} записей`, 'ok');
+    } catch { toast('Ошибка чтения файла', 'err'); }
+    input.value = '';
+  };
+  r.readAsText(file);
+}
+
+
+// ═══════════════════════════════════════════════════
+// AUTH — простая проверка без crypto.subtle
+// (crypto.subtle работает только на HTTPS, здесь надёжнее)
+// ═══════════════════════════════════════════════════
+function checkAuth() {
+  const val = document.getElementById('authInput').value;
+  // Простая проверка: пароль "1983"
+  if (val === '1983') {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+  } else {
+    const e = document.getElementById('authErr');
+    e.textContent = 'Неверный код доступа';
+    document.getElementById('authInput').value = '';
+    setTimeout(() => e.textContent = '', 2500);
+  }
+}
+document.getElementById('authInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkAuth(); });
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+let _clientJson    = null; // загруженный JSON клиента
+let _lastGenerated = null; // последняя сгенерированная запись
+
+function initApp() {
+  const today = new Date(), ny = new Date(today);
+  ny.setFullYear(ny.getFullYear() + 1);
+  document.getElementById('fIssued').value  = fmtDate(today);
+  document.getElementById('fExpires').value = fmtDate(ny);
+  renderHistory();
+}
+
+function fmtDate(d) { return d.toISOString().split('T')[0]; }
+
+function selectPlan(plan) {
+  document.getElementById('cardTrial').classList.toggle('selected', plan === 'trial');
+  document.getElementById('cardFull').classList.toggle('selected', plan === 'full');
+  document.querySelector(`input[value="${plan}"]`).checked = true;
+  if (plan === 'full') {
+    document.getElementById('fExpires').value = '2099-12-31';
+  } else {
+    const ny = new Date(); ny.setFullYear(ny.getFullYear() + 1);
+    document.getElementById('fExpires').value = fmtDate(ny);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// КЛИЕНТСКИЙ JSON (для продления)
+// ═══════════════════════════════════════════════════
+function handleClientFileInput(input) { if (input.files[0]) _loadClientFile(input.files[0]); }
+function handleClientFileDrop(ev) {
+  ev.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  const f = ev.dataTransfer.files[0];
+  if (f && f.name.endsWith('.json')) _loadClientFile(f);
+}
+function _loadClientFile(file) {
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      // Если это файл памяти генератора — предложить загрузить как память
+      if (parsed.version && parsed.history && Array.isArray(parsed.history) && !parsed.barcodes) {
+        if (confirm('Похоже, это файл памяти генератора, а не файл клиента.\nЗагрузить как память генератора?')) {
+          saveMemory(parsed); renderHistory();
+          toast('Память загружена: ' + parsed.history.length + ' записей', 'ok');
+        }
+        return;
+      }
+      _clientJson = parsed;
+      document.getElementById('uploadedFileName').textContent = '✓ ' + file.name;
+      // Автозаполнение клиента из лицензии
+      if (parsed.license && parsed.license.client && !document.getElementById('fClient').value) {
+        document.getElementById('fClient').value = parsed.license.client;
+      }
+      if (parsed.license && parsed.license.plan) selectPlan(parsed.license.plan);
+      toast('Файл клиента загружен: ' + file.name, 'ok');
+    } catch { toast('Ошибка парсинга JSON', 'err'); }
+  };
+  r.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════════════════
+async function generateHmac(client, plan, expires) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(_secret()), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${client}|${plan}|${expires}`));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function generate() {
+  const client  = document.getElementById('fClient').value.trim();
+  const plan    = document.querySelector('input[name=plan]:checked').value;
+  const issued  = document.getElementById('fIssued').value;
+  const expires = document.getElementById('fExpires').value;
+  const comment = document.getElementById('fComment').value.trim();
+
+  if (!client)  { toast('Укажите название клиента', 'warn'); return; }
+  if (!issued || !expires) { toast('Укажите даты', 'warn'); return; }
+  if (expires < issued)   { toast('Дата окончания раньше даты выдачи', 'warn'); return; }
+
+  const key      = await generateHmac(client, plan, expires);
+  const licBlock = { client, plan, issued, expires, key };
+  const base     = _clientJson
+    ? JSON.parse(JSON.stringify(_clientJson))
+    : { barcodes:{}, brands:{}, categoryWords:[], columnSettings:{ templates:[], synonyms:{} } };
+  base.license = licBlock;
+
+  _lastGenerated = { json: base, client, plan, issued, expires, comment, key, ts: new Date().toISOString() };
+
+  // Render
+  const badge = document.getElementById('resultBadge');
+  badge.className = 'badge ' + (plan === 'full' ? 'badge-full' : 'badge-trial');
+  badge.textContent = plan.toUpperCase();
+  document.getElementById('resultCode').textContent = JSON.stringify({ license: licBlock }, null, 2);
+  document.getElementById('btnCopy').disabled = false;
+  document.getElementById('downloadBtns').style.display = 'flex';
+
+  _saveToHistory(_lastGenerated);
+  renderHistory();
+  toast('Лицензия сгенерирована', 'ok');
+}
+
+function copyResult() {
+  if (!_lastGenerated) return;
+  navigator.clipboard.writeText(JSON.stringify({ license: _lastGenerated.json.license }, null, 2))
+    .then(() => toast('Скопировано', 'ok'));
+}
+
+function downloadJson() {
+  if (!_lastGenerated) return;
+  _downloadBlob(
+    JSON.stringify(_lastGenerated.json, null, 2),
+    `pm_${_safeName(_lastGenerated.client)}_${_lastGenerated.issued}.json`
+  );
+  toast('JSON клиента скачан', 'ok');
+}
+
+function resetForm() {
+  document.getElementById('fClient').value  = '';
+  document.getElementById('fComment').value = '';
+  _clientJson = null;
+  document.getElementById('uploadedFileName').textContent = '';
+  selectPlan('trial');
+  const today = new Date(), ny = new Date();
+  ny.setFullYear(today.getFullYear() + 1);
+  document.getElementById('fIssued').value  = fmtDate(today);
+  document.getElementById('fExpires').value = fmtDate(ny);
+  document.getElementById('resultCode').textContent = '// Заполните форму и нажмите «Сгенерировать»';
+  document.getElementById('resultBadge').className = 'badge badge-none';
+  document.getElementById('resultBadge').textContent = '—';
+  document.getElementById('btnCopy').disabled = true;
+  document.getElementById('downloadBtns').style.display = 'none';
+  _lastGenerated = null;
+}
+
+// ═══════════════════════════════════════════════════
+// TELEGRAM — всё через GAS-прокси
+// ═══════════════════════════════════════════════════
+function _buildFullText(rec) {
+  return [
+    '🔑 Лицензия — Прайс-менеджер',
+    '',
+    `👤 Клиент: ${rec.client}`,
+    `📋 Тариф: ${rec.plan.toUpperCase()}`,
+    `📅 Выдана: ${rec.issued}`,
+    `⏳ До: ${rec.expires}`,
+    rec.comment ? `💬 ${rec.comment}` : null,
+    '',
+    '🔐 Ключ (HMAC-SHA256):',
+    rec.key,
+    '',
+    `🕐 ${new Date(rec.ts).toLocaleString('ru')}`,
+  ].filter(l => l !== null).join('\n');
+}
+
+// Отправка JSON файла клиента через GAS (document + caption)
+async function sendJsonToTg() {
+  if (!_lastGenerated) return;
+  const filename = `pm_${_safeName(_lastGenerated.client)}_${_lastGenerated.issued}.json`;
+  const content  = JSON.stringify(_lastGenerated.json, null, 2);
+  const caption  = _buildFullText(_lastGenerated);
+
+  const fd = new FormData();
+  fd.append('document', new Blob([content], { type:'application/json' }), filename);
+  fd.append('caption', caption);
+
+  const btn = document.querySelector('#downloadBtns .btn:last-child');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Отправка...'; }
+  try {
+    // GAS принимает либо multipart (файл), либо JSON (текст)
+    // Отправляем файл как base64 + имя, GAS сам пересылает в TG
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode:   'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: filename,
+        fileContent: content,
+        caption: caption,
+      })
+    });
+    toast('JSON файл отправлен в Telegram', 'ok');
+  } catch (e) {
+    toast('Ошибка отправки', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Отправить в Telegram'; }
+  }
+}
+
+async function sendHistoryToTg() {
+  const history = loadMemory().history || [];
+  if (!history.length) { toast('История пуста', 'warn'); return; }
+  const today = fmtDate(new Date());
+  const lines = ['📋 История лицензий — Прайс-менеджер', `Всего: ${history.length}`, ''];
+  history.forEach((rec, i) => {
+    const exp = rec.expires < today ? ' ⚠️ ИСТЕКЛА' : '';
+    lines.push(`${i+1}. ${rec.client} · ${rec.plan.toUpperCase()} · до ${rec.expires}${exp}`);
+    if (rec.comment) lines.push(`   ${rec.comment}`);
+  });
+  try {
+    await fetch(GAS_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: lines.join('\n') })
+    });
+    toast('История отправлена в Telegram', 'ok');
+  } catch { toast('Ошибка отправки', 'err'); }
+}
+
+// ═══════════════════════════════════════════════════
+// HISTORY (хранится внутри memory)
+// ═══════════════════════════════════════════════════
+function _saveToHistory(rec) {
+  const mem = loadMemory();
+  const entry = {
+    client:  rec.client,
+    plan:    rec.plan,
+    issued:  rec.issued,
+    expires: rec.expires,
+    comment: rec.comment,
+    key:     rec.key,
+    ts:      rec.ts,
+  };
+  const idx = mem.history.findIndex(r => r.client === rec.client && r.plan === rec.plan);
+  if (idx >= 0) mem.history.splice(idx, 1, entry);
+  else mem.history.unshift(entry);
+  saveMemory(mem);
+}
+
+function clearHistory() {
+  if (!confirm('Очистить всю историю?')) return;
+  const mem = loadMemory();
+  mem.history = [];
+  saveMemory(mem);
+  renderHistory();
+  toast('История очищена', 'ok');
+}
+
+function renderHistory() {
+  const mem     = loadMemory();
+  const history = mem.history || [];
+  const tbody   = document.getElementById('historyBody');
+  document.getElementById('histCount').textContent = history.length + ' записей';
+  if (!history.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;font-size:var(--fz-sm)">История пуста</td></tr>';
+    return;
+  }
+  const today = fmtDate(new Date());
+  tbody.innerHTML = history.map((rec, i) => {
+    const expired = rec.expires < today;
+    const bcls    = rec.plan === 'full' ? 'badge-full' : 'badge-trial';
+    return `<tr>
+      <td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fz-md)"
+          title="${escHtml(rec.client)}">${escHtml(rec.client)}</td>
+      <td><span class="badge ${bcls}">${rec.plan.toUpperCase()}</span></td>
+      <td style="font-size:var(--fz-xs);font-family:'Courier New',monospace;white-space:nowrap">
+        ${rec.expires}${expired ? '<br><span style="color:var(--red);font-weight:700">истекла</span>' : ''}
+      </td>
+      <td><div class="hist-actions">
+        <button class="hist-btn" title="Загрузить в форму" onclick="loadFromHistory(${i})">✏️</button>
+        <button class="hist-btn" title="Отправить текст в TG" onclick="sendHistText(${i})">📝</button>
+        <button class="hist-btn del" title="Удалить" onclick="deleteHist(${i})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function loadFromHistory(i) {
+  const rec = (loadMemory().history || [])[i];
+  if (!rec) return;
+  document.getElementById('fClient').value  = rec.client;
+  document.getElementById('fComment').value = rec.comment || '';
+  document.getElementById('fIssued').value  = rec.issued;
+  document.getElementById('fExpires').value = rec.expires;
+  selectPlan(rec.plan);
+  toast('Загружено: ' + rec.client, 'ok');
+}
+
+async function sendHistText(i) {
+  const rec = (loadMemory().history || [])[i];
+  if (!rec) return;
+  try {
+    await fetch(GAS_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: _buildFullText(rec) })
+    });
+    toast('Отправлено в Telegram', 'ok');
+  } catch { toast('Ошибка отправки', 'err'); }
+}
+
+function deleteHist(i) {
+  const mem = loadMemory();
+  mem.history.splice(i, 1);
+  saveMemory(mem);
+  renderHistory();
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+function _safeName(s) {
+  return String(s).replace(/[^\wа-яёА-ЯЁ\- ]/gi,'').trim().replace(/\s+/g,'_') || 'client';
+}
+
+function _downloadBlob(text, filename) {
+  const blob = new Blob([text], { type:'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toast(msg, type = 'ok') {
+  const rack = document.getElementById('toastRack');
+  const el   = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  rack.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); }, 3200);
+}
+</script>
+</body>
+</html>
