@@ -486,7 +486,7 @@ body.order-mode .price-in-cart::after{content:'✓ в корзине' !important
 ══════════════════════════════════════ */
 .unified-unsaved-save-btn {
   font-size: var(--fz-sm);
-  padding: 4px 10px;
+  padding: 4px 12px 2px;
   height: 28px;
 }
 
