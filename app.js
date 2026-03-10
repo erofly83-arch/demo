@@ -122,6 +122,73 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// ── Смена пользователя / сброс лицензии ─────────────────────────────────
+window.switchUserConfirm = function() {
+  // Создаём модальное окно подтверждения
+  var existing = document.getElementById('_switchUserModal');
+  if (existing) { existing.style.display = 'flex'; return; }
+
+  var modal = document.createElement('div');
+  modal.id = '_switchUserModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = [
+    '<div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);font-family:Inter,sans-serif">',
+      '<div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px">🔄 Сменить пользователя?</div>',
+      '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:6px">',
+        'Будут удалены:',
+      '</div>',
+      '<ul style="font-size:12px;color:var(--text-secondary);line-height:2;margin:0 0 6px 18px">',
+        '<li>Активная лицензия</li>',
+        '<li>Все данные из памяти (кросскоды, бренды, синонимы)</li>',
+        '<li>Контактные данные</li>',
+      '</ul>',
+      '<div style="font-size:12px;color:var(--amber-dark);background:var(--amber-bg);border:1px solid #FDE68A;border-radius:6px;padding:8px 12px;margin-bottom:20px">',
+        '⚠️ Сначала <strong>сохраните файл памяти</strong>, если хотите вернуться к своей базе позднее.',
+      '</div>',
+      '<div style="display:flex;gap:8px;justify-content:flex-end">',
+        '<button onclick="document.getElementById(\'_switchUserModal\').style.display=\'none\'" ',
+          'style="padding:8px 18px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">',
+          'Отмена',
+        '</button>',
+        '<button onclick="window._doSwitchUser()" ',
+          'style="padding:8px 18px;border:none;border-radius:8px;background:var(--red);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">',
+          'Да, сбросить и выйти',
+        '</button>',
+      '</div>',
+    '</div>'
+  ].join('');
+  modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+  document.body.appendChild(modal);
+};
+
+window._doSwitchUser = function() {
+  // 1. Удаляем лицензию
+  try { localStorage.removeItem('pm_license_block'); } catch(e) {}
+  // 2. Удаляем контакт
+  try { localStorage.removeItem('userContact'); } catch(e) {}
+  // 3. Удаляем сессию брендов
+  try { localStorage.removeItem('_pm_brandDB_session'); } catch(e) {}
+  // 4. Очищаем grace-флаг
+  try { sessionStorage.removeItem('_graceOverlayDismissed'); } catch(e) {}
+  window.LICENSE = null;
+  window._graceOverlayDismissed = false;
+  window._userContact = '';
+  // 5. Если есть функция clearAll — очищаем все данные
+  if (typeof clearAll === 'function') clearAll();
+  // 6. Убираем UI лицензии
+  var licBlock = document.getElementById('licSidebarBlock'); if (licBlock) licBlock.remove();
+  var licBanner = document.getElementById('licTrialBanner'); if (licBanner) licBanner.remove();
+  var licOverlay = document.getElementById('licOverlay'); if (licOverlay) licOverlay.remove();
+  var licStatus = document.getElementById('licKeyStatus'); if (licStatus) licStatus.style.display = 'none';
+  var contactBlock = document.getElementById('userContactFilled'); if (contactBlock) contactBlock.style.display = 'none';
+  var contactEmpty = document.getElementById('userContactEmpty'); if (contactEmpty) contactEmpty.style.display = 'flex';
+  // 7. Убираем модал
+  var modal = document.getElementById('_switchUserModal'); if (modal) modal.remove();
+  // 8. Блокируем карточки прайсов
+  if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+  if (typeof showToast === 'function') showToast('Данные сброшены — введите новый ключ лицензии', 'ok');
+};
+
 window.applyLicenseKeyFromInput = function() {
   var input = document.getElementById('licKeyInput');
   if (!input) return;
@@ -8987,7 +9054,7 @@ function _renderLicenseSidebar(lic) {
 
   var block = document.createElement('div');
   block.id = 'licSidebarBlock';
-  block.style.cssText = 'padding:8px 12px 6px;border-top:1px solid var(--border);margin-top:4px';
+  block.style.cssText = 'padding:8px 12px 6px;border-top:1px solid var(--border);margin-top:4px;box-sizing:border-box;width:100%';
 
   if (lic.status === 'valid' && lic.plan === 'full') {
     block.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--green-bg);border:1px solid #A7F3D0;border-radius:var(--radius-md)">'

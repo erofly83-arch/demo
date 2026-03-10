@@ -122,7 +122,7 @@
 </button>
 </div>
 <!-- PWA: кнопка установки (скрыта по умолчанию) -->
-<button id="errLogBtn" onclick="window.openErrLog()" style="display:none;width:100%;margin-top:4px;padding:7px 10px;background:#fff1f2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;align-items:center;justify-content:center;gap:7px;transition:background .15s,border-color .15s;line-height:1;" onmouseover="this.style.background='#fee2e2';this.style.borderColor='#ef4444'" onmouseout="this.style.background='#fff1f2';this.style.borderColor='#fca5a5'" title="Открыть журнал ошибок">
+<button id="errLogBtn" onclick="window.openErrLog()" style="display:none;width:calc(100% - 24px);margin:4px 12px 0;padding:7px 10px;background:#fff1f2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;align-items:center;justify-content:center;gap:7px;transition:background .15s,border-color .15s;line-height:1;box-sizing:border-box;" onmouseover="this.style.background='#fee2e2';this.style.borderColor='#ef4444'" onmouseout="this.style.background='#fff1f2';this.style.borderColor='#fca5a5'" title="Открыть журнал ошибок">
   Ошибки (<span id="errLogCount">0</span>)
 </button>
 <!-- Модальное окно журнала ошибок -->
@@ -147,7 +147,7 @@
     </div>
   </div>
 </div>
-<button id="pwaInstallBtn" onclick="pwaInstall()" onmouseout="this.style.opacity='1'" onmouseover="this.style.opacity='.85'" style="display:none;width:100%;margin-top:4px;padding:8px 10px;background:linear-gradient(135deg,#3B6FD4,#5B8FEF);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;align-items:center;justify-content:center;gap:7px;transition:opacity .2s;line-height:1;">
+<button id="pwaInstallBtn" onclick="pwaInstall()" onmouseout="this.style.opacity='1'" onmouseover="this.style.opacity='.85'" style="display:none;width:calc(100% - 24px);margin:4px 12px 0;padding:8px 10px;background:linear-gradient(135deg,#3B6FD4,#5B8FEF);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;align-items:center;justify-content:center;gap:7px;transition:opacity .2s;line-height:1;box-sizing:border-box;">
 <svg height="20" style="flex-shrink:0;" viewbox="0 0 100 100" width="20" xmlns="http://www.w3.org/2000/svg">
 <rect fill="white" height="10" rx="5" width="45" x="20" y="25"></rect>
 <rect fill="white" height="10" rx="5" width="30" x="20" y="45"></rect>
@@ -205,6 +205,9 @@
         onblur="this.style.borderColor='';this.style.boxShadow=''"></textarea>
       <button class="btn btn-success" onclick="applyLicenseKeyFromInput()" style="flex-shrink:0;height:32px;">
         <i data-lucide="key"></i> Применить
+      </button>
+      <button class="btn" onclick="window.switchUserConfirm()" style="flex-shrink:0;height:32px;color:var(--text-secondary);" title="Сбросить лицензию и данные — для смены пользователя или устройства">
+        <i data-lucide="log-out"></i>
       </button>
     </div>
   </div>
