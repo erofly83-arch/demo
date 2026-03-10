@@ -4,6 +4,7 @@ function reIcons(root) {
 }
 
 const BRAND_CONFIG_SAVED = {};
+const TRIAL_ROW_LIMIT = 100; // максимум строк таблицы мониторинга в trial-версии
 
 // ── GAS прокси (общий для логгера ошибок и формы обратной связи) ──
 const GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbx83p3j8SbXGjTCyEXNsfBCH9Np2G-2R00ZMlUP0jzIjjvXnMtQ6tAux0Hpt6nNrh_n/exec';
@@ -89,7 +90,7 @@ try { window._graceOverlayDismissed = sessionStorage.getItem('_graceOverlayDismi
     var json = JSON.parse(saved);
     LicenseManager.validate(json).then(function(lic) {
       if (lic.status === 'valid' || lic.status === 'grace') {
-        window.LICENSE = lic;
+        window.LICENSE = Object.freeze(lic);
         // requestAnimationFrame чтобы DOM точно готов перед рендером sidebar
         requestAnimationFrame(function() {
           _applyLicenseUI(lic);
@@ -99,7 +100,7 @@ try { window._graceOverlayDismissed = sessionStorage.getItem('_graceOverlayDismi
       } else {
         // истекла — показываем оверлей, но даём скачать
         if (lic.status === 'expired') {
-          window.LICENSE = lic;
+          window.LICENSE = Object.freeze(lic);
           requestAnimationFrame(function() {
             _applyLicenseUI(lic);
             _renderLicKeyStatus(lic);
@@ -163,7 +164,7 @@ window.applyLicenseKeyFromInput = function() {
       try { localStorage.setItem('pm_license_block', JSON.stringify({ license: json.license })); } catch(e) {}
     }
 
-    window.LICENSE = lic;
+    window.LICENSE = Object.freeze(lic);
 
     // Если в блоке лицензии есть контакт клиента — применяем
     if (json.license.contact && typeof window._userContactLoad === 'function') {
@@ -1541,7 +1542,19 @@ return { barcode: item.barcode, packQty, autoDivFactor,
         // ── DELTA % FILTER HOOK ──
         if (window._deltaFilterActive && typeof window._deltaApplyToData === 'function') {
             dataToShow = window._deltaApplyToData(dataToShow);
-        }        _vsData = dataToShow;
+        }
+
+        // ── TRIAL: ограничение строк ─────────────────────────────────────
+        var _trialLimited = false;
+        var _trialTotal = dataToShow.length;
+        if (!LicenseManager.isAllowed('export') && window.LICENSE && window.LICENSE.status !== 'expired') {
+            if (dataToShow.length > TRIAL_ROW_LIMIT) {
+                dataToShow = dataToShow.slice(0, TRIAL_ROW_LIMIT);
+                _trialLimited = true;
+            }
+        }
+
+        _vsData = dataToShow;
 
         if (dataToShow.length === 0) {
             tableContainer.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i data-lucide="alert-triangle" style="width:36px;height:36px;color:var(--amber)"></i></div><h3>Нет данных для отображения</h3><p>Проверьте содержимое загруженных файлов или измените фильтры</p></div>`;
@@ -1617,6 +1630,22 @@ return { barcode: item.barcode, packQty, autoDivFactor,
                 _zt.style.zoom = window._tableZoomLevel;
             }
         });
+
+        // ── Trial: баннер-ограничитель строк ───────────────────────────────
+        var _oldTrialBanner = document.getElementById('_trialRowLimitBanner');
+        if (_oldTrialBanner) _oldTrialBanner.remove();
+        if (_trialLimited) {
+            var _tlb = document.createElement('div');
+            _tlb.id = '_trialRowLimitBanner';
+            _tlb.style.cssText = 'margin-top:6px;padding:8px 16px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:6px;font-size:12px;color:var(--amber-dark);display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+            _tlb.innerHTML = '<span style="font-weight:700">⚠️ Trial: показано ' + TRIAL_ROW_LIMIT + ' из ' + _trialTotal.toLocaleString('ru') + ' строк.</span>'
+                + '<span>Для полного доступа перейдите на <strong>Full</strong>-лицензию.</span>'
+                + '<span style="margin-left:auto;display:flex;gap:10px">'
+                + '<a href="tel:+79130998250" style="color:var(--accent);font-weight:600;text-decoration:none">📞 +7 913 099-82-50</a>'
+                + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="color:var(--accent);font-weight:600;text-decoration:none">✈️ Telegram</a>'
+                + '</span>';
+            if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(_tlb, wrap.nextSibling);
+        }
     }
 
     function dividePrice(barcode, colKey, valueIndex, factorStr) {
@@ -1736,6 +1765,11 @@ return { barcode: item.barcode, packQty, autoDivFactor,
     }
 
     async function generateExcel(mode) {
+    // Жёсткая проверка лицензии внутри функции — независимо от состояния UI
+    if (!LicenseManager.isAllowed('export')) {
+      if (typeof showToast === 'function') showToast('Экспорт недоступен в Trial-версии — перейдите на Full', 'warn');
+      return;
+    }
     try {
     const _exMeta=allColumns.filter(c=>c.metaType&&visibleColumns.has(c.key));
     const _exMyP =allColumns.filter(c=>!c.metaType&&c.fileName===MY_PRICE_FILE_NAME&&visibleColumns.has(c.key));
@@ -2710,11 +2744,24 @@ if (fileInputMyPrice) fileInputMyPrice.addEventListener("change", function(e) {
 
 // ── Проверка: загружен ли файл памяти ────────────────────────────────────
 function _isJsonLoaded() {
+  // Только пользовательские данные — для замка карточек загрузки прайсов.
+  // columnTemplates/columnSynonyms не проверяем — они всегда содержат дефолтные значения.
   return (typeof jeDB !== 'undefined' && Object.keys(jeDB).length > 0)
       || (typeof _brandDB !== 'undefined' && Object.keys(_brandDB).length > 0)
-      || (typeof columnTemplates !== 'undefined' && columnTemplates.length > 0)
-      || (typeof columnSynonyms !== 'undefined' && Object.keys(columnSynonyms).length > 0)
       || (typeof _catWordsBase !== 'undefined' && _catWordsBase.size > 0);
+}
+
+function _hasUserData() {
+  // Расширенная проверка — для предупреждения о замене файла памяти.
+  // Включает нестандартные настройки колонок, введённые пользователем.
+  if (_isJsonLoaded()) return true;
+  try {
+    if (typeof columnTemplates !== 'undefined' && typeof DEFAULT_COLUMN_TEMPLATES !== 'undefined'
+        && JSON.stringify(columnTemplates) !== JSON.stringify(DEFAULT_COLUMN_TEMPLATES)) return true;
+    if (typeof columnSynonyms !== 'undefined' && typeof DEFAULT_COLUMN_SYNONYMS !== 'undefined'
+        && JSON.stringify(columnSynonyms) !== JSON.stringify(DEFAULT_COLUMN_SYNONYMS)) return true;
+  } catch(e) {}
+  return false;
 }
 
 // ── Блокировка/разблокировка карточек загрузки прайсов ───────────────────
@@ -2753,8 +2800,8 @@ function _updatePriceCardsLock() {
 
 function _handleJsonFileUpload(file, afterLoad) {
   if (!file) return;
-  // Если файл памяти уже загружен — спросить перед перезаписью
-  if (_isJsonLoaded()) {
+  // Если уже есть пользовательские данные (в т.ч. кастомные настройки колонок) — предупредить
+  if (_hasUserData()) {
     jeConfirmDialog(
       'Файл памяти уже загружен. Заменить его файлом «' + file.name + '»?\nВсе текущие данные (кросскоды, бренды, настройки) будут перезаписаны.',
       'Замена файла памяти'
@@ -2794,7 +2841,7 @@ function _doLoadJsonFile(file, afterLoad) {
           }
         }
 
-        window.LICENSE = lic;
+        window.LICENSE = Object.freeze(lic);
 
         // Загружаем данные
         if (typeof applyJsonToState === 'function') {
@@ -5336,6 +5383,11 @@ document.getElementById('jeClearBtn').addEventListener('click', function() {
 });
 
 document.getElementById('jeExportXlsxBtn').addEventListener('click', async function() {
+  // Жёсткая проверка лицензии внутри обработчика
+  if (!LicenseManager.isAllowed('export')) {
+    if (typeof showToast === 'function') showToast('Экспорт недоступен в Trial-версии — перейдите на Full', 'warn');
+    return;
+  }
   const rows = [['Штрихкод','Наименование','Кросскоды ШК']];
   for (const [k,v] of Object.entries(jeDB)) rows.push([k, Array.isArray(v)?(v[0]||''):'', Array.isArray(v)?v.slice(1).join(', '):'']);
   const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = [{wch:20},{wch:44},{wch:60}];
