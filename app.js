@@ -79,6 +79,7 @@ var LicenseManager = (function() {
 })();
 
 window.LICENSE = null; // заполняется при загрузке JSON или из localStorage
+try { window._graceOverlayDismissed = sessionStorage.getItem('_graceOverlayDismissed') === '1'; } catch(e) { window._graceOverlayDismissed = false; }
 
 // ── Восстановить сохранённую лицензию при старте ────────────────────────
 (function() {
@@ -89,15 +90,20 @@ window.LICENSE = null; // заполняется при загрузке JSON и
     LicenseManager.validate(json).then(function(lic) {
       if (lic.status === 'valid' || lic.status === 'grace') {
         window.LICENSE = lic;
-        _applyLicenseUI(lic);
-        _renderLicKeyStatus(lic);
-        if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+        // requestAnimationFrame чтобы DOM точно готов перед рендером sidebar
+        requestAnimationFrame(function() {
+          _applyLicenseUI(lic);
+          _renderLicKeyStatus(lic);
+          if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+        });
       } else {
         // истекла — показываем оверлей, но даём скачать
         if (lic.status === 'expired') {
           window.LICENSE = lic;
-          _applyLicenseUI(lic);
-          _renderLicKeyStatus(lic);
+          requestAnimationFrame(function() {
+            _applyLicenseUI(lic);
+            _renderLicKeyStatus(lic);
+          });
         } else {
           localStorage.removeItem('pm_license_block');
         }
@@ -107,6 +113,14 @@ window.LICENSE = null; // заполняется при загрузке JSON и
 })();
 
 // ── Применить лицензию из поля ввода ────────────────────────────────────
+// ── Настройка поля ввода ключа ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var _ki = document.getElementById('licKeyInput');
+  if (_ki && !_ki.placeholder) {
+    _ki.placeholder = 'Вставьте блок {"license":{...}} или полный JSON клиента';
+  }
+});
+
 window.applyLicenseKeyFromInput = function() {
   var input = document.getElementById('licKeyInput');
   if (!input) return;
@@ -135,8 +149,12 @@ window.applyLicenseKeyFromInput = function() {
       _renderLicKeyStatus({ status: 'invalid' });
       return;
     }
+    // Если пользователь вставил полный JSON (с barcodes и т.д.) — предупредить
+    var hasExtraData = json.barcodes || json.brands || json.columnSettings;
     if (lic.status === 'expired') {
       if (typeof showToast === 'function') showToast('Ключ действителен, но срок истёк', 'warn');
+    } else if (hasExtraData) {
+      if (typeof showToast === 'function') showToast('Лицензия активирована. Данные из файла не загружены — используйте «Загрузить файл памяти».', 'ok');
     } else {
       if (typeof showToast === 'function') showToast('Лицензия активирована: ' + lic.client, 'ok');
     }
@@ -173,6 +191,7 @@ function _renderLicKeyStatus(lic) {
     grace:   { bg:'#FFF7ED',          border:'#FED7AA', color:'#C2410C',            text: '⚠️ Grace ' + (lic.daysPast||0) + '/3 дн.' },
     expired: { bg:'var(--red-bg)',     border:'#FCA5A5', color:'var(--red)',         text: '🔒 Истекла' },
     invalid: { bg:'var(--red-bg)',     border:'#FCA5A5', color:'var(--red)',         text: '❌ Неверный ключ' },
+    none:    { bg:'var(--surface-alt)', border:'var(--border)', color:'var(--text-muted)', text: '— Ключ не введён' },
   };
   var s = map[lic.status] || map.invalid;
   el.innerHTML = '<span style="display:inline-flex;align-items:center;padding:4px 10px;background:' + s.bg + ';border:1px solid ' + s.border + ';border-radius:99px;font-size:var(--fz-xs);font-weight:700;color:' + s.color + ';white-space:nowrap">' + s.text + '</span>';
@@ -265,6 +284,13 @@ function _renderLicKeyStatus(lic) {
 
   // ── Контакт пользователя ─────────────────────────────────────────────────
   try { window._userContact = localStorage.getItem('userContact') || ''; } catch(e) { window._userContact = ''; }
+  // Fallback: восстановить контакт из блока лицензии если userContact пуст
+  if (!window._userContact) {
+    try {
+      var _lcb = localStorage.getItem('pm_license_block');
+      if (_lcb) { var _lcj = JSON.parse(_lcb); if (_lcj && _lcj.license && _lcj.license.contact) { window._userContact = _lcj.license.contact; localStorage.setItem('userContact', window._userContact); } }
+    } catch(e) {}
+  }
   window._userContactRender = function() {
     var val = window._userContact || '';
     var empty  = document.getElementById('userContactEmpty');
@@ -288,6 +314,14 @@ function _renderLicKeyStatus(lic) {
     if (!val) { if (typeof showToast === 'function') showToast('Введите контакт', 'warn'); return; }
     window._userContact = val;
     try { localStorage.setItem('userContact', val); } catch(e) {}
+    // Синхронизируем контакт в сохранённый блок лицензии
+    try {
+      var _lb = localStorage.getItem('pm_license_block');
+      if (_lb) {
+        var _lj = JSON.parse(_lb);
+        if (_lj && _lj.license) { _lj.license.contact = val; localStorage.setItem('pm_license_block', JSON.stringify(_lj)); }
+      }
+    } catch(e) {}
     window._userContactRender();
     if (typeof showToast === 'function') showToast('Контакт сохранён', 'ok');
   };
@@ -2135,6 +2169,7 @@ return { barcode: item.barcode, packQty, autoDivFactor,
 
       const combined = {
         userContact: (window._userContact || undefined),
+        license: (window.LICENSE && window.LICENSE.raw) ? window.LICENSE.raw : undefined,
         barcodes: jeDB,
         brands: typeof _brandDB !== 'undefined' ? _brandDB : {},
         categoryWords: (typeof _catWordsBase !== 'undefined' && _catWordsBase.size > 0) ? [..._catWordsBase].sort() : undefined,
@@ -2676,7 +2711,10 @@ if (fileInputMyPrice) fileInputMyPrice.addEventListener("change", function(e) {
 // ── Проверка: загружен ли файл памяти ────────────────────────────────────
 function _isJsonLoaded() {
   return (typeof jeDB !== 'undefined' && Object.keys(jeDB).length > 0)
-      || (typeof _brandDB !== 'undefined' && Object.keys(_brandDB).length > 0);
+      || (typeof _brandDB !== 'undefined' && Object.keys(_brandDB).length > 0)
+      || (typeof columnTemplates !== 'undefined' && columnTemplates.length > 0)
+      || (typeof columnSynonyms !== 'undefined' && Object.keys(columnSynonyms).length > 0)
+      || (typeof _catWordsBase !== 'undefined' && _catWordsBase.size > 0);
 }
 
 // ── Блокировка/разблокировка карточек загрузки прайсов ───────────────────
@@ -2744,7 +2782,7 @@ function _doLoadJsonFile(file, afterLoad) {
           var savedLic = (window.LICENSE && (window.LICENSE.status === 'valid' || window.LICENSE.status === 'grace'))
             ? window.LICENSE : null;
           if (!savedLic) {
-            showToast('Файл не содержит действующей лицензии', 'err');
+            showToast('Файл не содержит лицензии. Введите ключ в поле «Лицензия» в настройках.', 'warn');
             return;
           }
           // Есть сохранённая лицензия — грузим данные с ней
@@ -5770,6 +5808,8 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         if ((typeof jeDB !== 'undefined' && Object.keys(jeDB).length > 0) || (typeof _brandDB !== 'undefined' && Object.keys(_brandDB).length > 0)) {
           const combined = {
+            userContact: (window._userContact || undefined),
+            license: (window.LICENSE && window.LICENSE.raw) ? window.LICENSE.raw : undefined,
             barcodes: (typeof jeDB !== 'undefined') ? jeDB : {},
             brands: (typeof _brandDB !== 'undefined') ? _brandDB : {},
             categoryWords: (typeof _catWordsBase !== 'undefined' && _catWordsBase.size > 0) ? [..._catWordsBase].sort() : undefined,
@@ -7160,6 +7200,10 @@ window.updateUI = function() {
   if (typeof _origUpdateUI === 'function') _origUpdateUI.apply(this, arguments);
   var hasData = (typeof groupedData !== 'undefined' && groupedData.length > 0);
   if (deltaFilterBtn) deltaFilterBtn.disabled = !hasData;
+  // Переприменяем ограничения лицензии — updateUI может сбросить disabled-состояние кнопок
+  if (window.LICENSE && typeof _applyLicenseRestrictions === 'function') {
+    _applyLicenseRestrictions(window.LICENSE);
+  }
 };
 
 
@@ -9006,7 +9050,8 @@ function _showLicenseOverlay(lic, isGrace) {
     cont.style.cssText = 'margin-top:8px;width:100%;padding:9px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;font-size:12px;color:#92400E;cursor:pointer;font-family:Inter,sans-serif';
     cont.onclick = function() {
       overlay.remove();
-      window._graceOverlayDismissed = true; // не показывать повторно в этой сессии
+      window._graceOverlayDismissed = true;
+      try { sessionStorage.setItem('_graceOverlayDismissed', '1'); } catch(e) {}
     };
     box.appendChild(cont);
   }

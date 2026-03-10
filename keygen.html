@@ -527,10 +527,12 @@ function downloadJson() {
 
 function downloadLicenseOnly() {
   if (!_lastGenerated) return;
+  // Только блок лицензии — без barcodes, brands и т.д.
+  // Пользователь вставляет этот файл в поле «Ключ лицензии» в приложении
   const licOnly = { license: _lastGenerated.json.license };
   _downloadBlob(
     JSON.stringify(licOnly, null, 2),
-    `pm_key_${_safeName(_lastGenerated.client)}_${_lastGenerated.issued}.json`
+    `pm_licensekey_${_safeName(_lastGenerated.client)}_${_lastGenerated.issued}.json`
   );
   toast('Файл ключа скачан', 'ok');
 }
