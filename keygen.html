@@ -228,9 +228,15 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
       </div>
 
       <div class="container">
-        <div class="field" style="margin-bottom:0">
-          <label>Комментарий <span style="font-weight:400;text-transform:none;letter-spacing:0">(не влияет на ключ)</span></label>
-          <input type="text" id="fComment" placeholder="Проект, заметки...">
+        <div class="form-row">
+          <div class="field" style="margin-bottom:0">
+            <label>Телефон / Telegram клиента <span style="font-weight:400;text-transform:none;letter-spacing:0">(сохраняется в JSON)</span></label>
+            <input type="text" id="fContact" placeholder="+7 913 ... или @username" autocomplete="off">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Комментарий <span style="font-weight:400;text-transform:none;letter-spacing:0">(не влияет на ключ)</span></label>
+            <input type="text" id="fComment" placeholder="Проект, заметки...">
+          </div>
         </div>
       </div>
 
@@ -271,7 +277,8 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
           <pre class="result-code" id="resultCode">// Заполните форму и нажмите «Сгенерировать»</pre>
         </div>
         <div id="downloadBtns" class="btn-row" style="display:none;margin-top:10px">
-          <button class="btn btn-success btn-sm" onclick="downloadJson()">⬇ Скачать JSON</button>
+          <button class="btn btn-success btn-sm" onclick="downloadJson()">⬇ Скачать JSON клиента</button>
+          <button class="btn btn-sm" onclick="downloadLicenseOnly()">⬇ Только ключ</button>
           <button class="btn btn-sm" onclick="sendJsonToTg()">📨 Отправить в Telegram</button>
         </div>
       </div>
@@ -289,6 +296,7 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
             <thead>
               <tr>
                 <th>Клиент</th>
+                <th>Контакт</th>
                 <th>Тариф</th>
                 <th>До</th>
                 <th></th>
@@ -445,6 +453,10 @@ function _loadClientFile(file) {
         document.getElementById('fClient').value = parsed.license.client;
       }
       if (parsed.license && parsed.license.plan) selectPlan(parsed.license.plan);
+      // Автозаполнение контакта из JSON клиента
+      if (parsed.userContact && !document.getElementById('fContact').value) {
+        document.getElementById('fContact').value = parsed.userContact;
+      }
       toast('Файл клиента загружен: ' + file.name, 'ok');
     } catch { toast('Ошибка парсинга JSON', 'err'); }
   };
@@ -467,6 +479,7 @@ async function generate() {
   const issued  = document.getElementById('fIssued').value;
   const expires = document.getElementById('fExpires').value;
   const comment = document.getElementById('fComment').value.trim();
+  const contact = document.getElementById('fContact').value.trim();
 
   if (!client)  { toast('Укажите название клиента', 'warn'); return; }
   if (!issued || !expires) { toast('Укажите даты', 'warn'); return; }
@@ -478,8 +491,9 @@ async function generate() {
     ? JSON.parse(JSON.stringify(_clientJson))
     : { barcodes:{}, brands:{}, categoryWords:[], columnSettings:{ templates:[], synonyms:{} } };
   base.license = licBlock;
+  if (contact) base.userContact = contact;
 
-  _lastGenerated = { json: base, client, plan, issued, expires, comment, key, ts: new Date().toISOString() };
+  _lastGenerated = { json: base, client, plan, issued, expires, comment, contact, key, ts: new Date().toISOString() };
 
   // Render
   const badge = document.getElementById('resultBadge');
@@ -509,8 +523,19 @@ function downloadJson() {
   toast('JSON клиента скачан', 'ok');
 }
 
+function downloadLicenseOnly() {
+  if (!_lastGenerated) return;
+  const licOnly = { license: _lastGenerated.json.license };
+  _downloadBlob(
+    JSON.stringify(licOnly, null, 2),
+    `pm_key_${_safeName(_lastGenerated.client)}_${_lastGenerated.issued}.json`
+  );
+  toast('Файл ключа скачан', 'ok');
+}
+
 function resetForm() {
   document.getElementById('fClient').value  = '';
+  document.getElementById('fContact').value = '';
   document.getElementById('fComment').value = '';
   _clientJson = null;
   document.getElementById('uploadedFileName').textContent = '';
@@ -535,6 +560,7 @@ function _buildFullText(rec) {
     '🔑 Лицензия — Прайс-менеджер',
     '',
     `👤 Клиент: ${rec.client}`,
+    rec.contact ? `📞 Контакт: ${rec.contact}` : null,
     `📋 Тариф: ${rec.plan.toUpperCase()}`,
     `📅 Выдана: ${rec.issued}`,
     `⏳ До: ${rec.expires}`,
@@ -608,6 +634,7 @@ function _saveToHistory(rec) {
   const mem = loadMemory();
   const entry = {
     client:  rec.client,
+    contact: rec.contact || '',
     plan:    rec.plan,
     issued:  rec.issued,
     expires: rec.expires,
@@ -644,8 +671,10 @@ function renderHistory() {
     const expired = rec.expires < today;
     const bcls    = rec.plan === 'full' ? 'badge-full' : 'badge-trial';
     return `<tr>
-      <td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fz-md)"
+      <td style="font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fz-md)"
           title="${escHtml(rec.client)}">${escHtml(rec.client)}</td>
+      <td style="font-size:var(--fz-xs);color:var(--text-secondary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          title="${escHtml(rec.contact||'')}">${escHtml(rec.contact||'—')}</td>
       <td><span class="badge ${bcls}">${rec.plan.toUpperCase()}</span></td>
       <td style="font-size:var(--fz-xs);font-family:'Courier New',monospace;white-space:nowrap">
         ${rec.expires}${expired ? '<br><span style="color:var(--red);font-weight:700">истекла</span>' : ''}
@@ -663,6 +692,7 @@ function loadFromHistory(i) {
   const rec = (loadMemory().history || [])[i];
   if (!rec) return;
   document.getElementById('fClient').value  = rec.client;
+  document.getElementById('fContact').value = rec.contact || '';
   document.getElementById('fComment').value = rec.comment || '';
   document.getElementById('fIssued').value  = rec.issued;
   document.getElementById('fExpires').value = rec.expires;

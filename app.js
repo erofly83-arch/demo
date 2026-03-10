@@ -146,16 +146,7 @@ window.applyLicenseKeyFromInput = function() {
 
     window.LICENSE = lic;
 
-    // Убираем устаревший оверлей/баннер только если новый статус — valid
-    // (для grace оверлей покажется заново через _applyLicenseUI ниже)
-    if (lic.status === 'valid') {
-      var overlay = document.getElementById('licOverlay');
-      if (overlay) overlay.remove();
-      var banner = document.getElementById('licTrialBanner');
-      if (banner) banner.remove();
-    }
-
-    // Применяем UI (один раз)
+    // Применяем UI (один раз) — он сам уберёт старые баннер/оверлей
     _applyLicenseUI(lic);
     _renderLicKeyStatus(lic);
     if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
@@ -8810,6 +8801,13 @@ function _applyLicenseUI(lic) {
   _applyLicenseRestrictions(lic);
   _renderLicenseSidebar(lic);
 
+  // Сначала убираем все предыдущие элементы — чтобы смена плана/статуса
+  // (например trial → full) всегда давала чистое состояние
+  var _oldOverlay = document.getElementById('licOverlay');
+  var _oldBanner  = document.getElementById('licTrialBanner');
+  if (_oldOverlay) _oldOverlay.remove();
+  if (_oldBanner)  _oldBanner.remove();
+
   if (lic.status === 'expired') {
     _showLicenseOverlay(lic, false); // нет grace — полный блок
   } else if (lic.status === 'grace') {
@@ -8817,6 +8815,7 @@ function _applyLicenseUI(lic) {
   } else if (lic.status === 'valid' && lic.plan === 'trial') {
     _showTrialBanner(lic);
   }
+  // valid + full — ничего не показываем, элементы уже убраны выше
 }
 
 // ── Перехватчик кликов по заблокированным кнопкам экспорта (один раз) ─────
