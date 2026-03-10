@@ -134,12 +134,16 @@ window.switchUserConfirm = function() {
   modal.innerHTML = [
     '<div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);font-family:Inter,sans-serif">',
       '<div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px">🔄 Сменить пользователя?</div>',
-      '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px">',
-        'Лицензия и данные памяти текущего пользователя будут удалены.',
+      '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:6px">',
+        'Будут удалены:',
       '</div>',
-      '<div style="font-size:12px;color:var(--amber-dark);background:var(--amber-bg);border:1px solid #FDE68A;border-radius:6px;padding:10px 12px;margin-bottom:20px;display:flex;align-items:center;gap:10px">',
-        '<span style="flex:1;line-height:1.5">💾 Сохраните файл памяти, если хотите вернуться к своей базе позднее.</span>',
-        '<button onclick="(function(){if(typeof downloadCurrentSynonyms===\'function\')downloadCurrentSynonyms();else if(typeof window.downloadCurrentSynonyms===\'function\')window.downloadCurrentSynonyms();})()" style="flex-shrink:0;padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">⬇ Сохранить</button>',
+      '<ul style="font-size:12px;color:var(--text-secondary);line-height:2;margin:0 0 6px 18px">',
+        '<li>Активная лицензия</li>',
+        '<li>Все данные из памяти (кросскоды, бренды, синонимы)</li>',
+        '<li>Контактные данные</li>',
+      '</ul>',
+      '<div style="font-size:12px;color:var(--amber-dark);background:var(--amber-bg);border:1px solid #FDE68A;border-radius:6px;padding:8px 12px;margin-bottom:20px">',
+        '⚠️ Сначала <strong>сохраните файл памяти</strong>, если хотите вернуться к своей базе позднее.',
       '</div>',
       '<div style="display:flex;gap:8px;justify-content:flex-end">',
         '<button onclick="document.getElementById(\'_switchUserModal\').style.display=\'none\'" ',
@@ -276,6 +280,17 @@ function _renderLicKeyStatus(lic) {
     return { ts: ts, msg: msg, stack: stack, full: ts + ' | ' + msg + (stack ? '\n' + stack : '') };
   }
 
+  function _licInfo() {
+    var lic = window.LICENSE;
+    if (!lic || lic.status === 'none') return '';
+    var parts = [];
+    if (lic.client)  parts.push('Клиент: ' + lic.client);
+    if (lic.plan)    parts.push('Тариф: ' + lic.plan.toUpperCase());
+    if (lic.expires) parts.push('Действует до: ' + lic.expires);
+    if (lic.status)  parts.push('Статус: ' + lic.status);
+    return parts.length ? parts.join(' | ') + '\n' : '';
+  }
+
   function _buildReport() {
     var ua = (navigator.userAgent.match(/(Chrome|Firefox|Safari|Edge)\/[\d.]+/) || [''])[0];
     var contact = window._userContact ? 'Контакт: ' + window._userContact + '\n' : '';
@@ -283,6 +298,7 @@ function _renderLicKeyStatus(lic) {
       + 'Дата: ' + new Date().toLocaleString('ru') + '\n'
       + 'UA: ' + (ua || navigator.userAgent.slice(0, 40)) + '\n'
       + contact
+      + _licInfo()
       + '─────────────────────────────────\n';
     var body = _errs.map(function(e, i) {
       return (i + 1) + ') ' + e.full;
@@ -299,6 +315,7 @@ function _renderLicKeyStatus(lic) {
       + 'Дата: ' + new Date().toLocaleString('ru') + '\n'
       + 'UA: ' + (ua || navigator.userAgent.slice(0, 40)) + '\n'
       + contact
+      + _licInfo()
       + '─────────────────────────────────\n'
       + errEntry.full;
     fetch(_GAS_URL, {
@@ -1704,8 +1721,8 @@ return { barcode: item.barcode, packQty, autoDivFactor,
             _tlb.innerHTML = '<span style="font-weight:700">⚠️ Trial: показано ' + TRIAL_ROW_LIMIT + ' из ' + _trialTotal.toLocaleString('ru') + ' строк.</span>'
                 + '<span>Для полного доступа перейдите на <strong>Full</strong>-лицензию.</span>'
                 + '<span style="margin-left:auto;display:flex;gap:10px">'
-                + '<a href="tel:+79130998250" style="display:inline-flex;align-items:center;color:#16A34A;font-weight:600;text-decoration:none"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#16A34A\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"display:inline;vertical-align:middle;margin-right:4px\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.88a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z\"/></svg>+7 913 099-82-50</a>'
-                + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="display:inline-flex;align-items:center;color:var(--accent);font-weight:600;text-decoration:none"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\" style=\"display:inline;vertical-align:middle;margin-right:4px\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"#3B6FD4\"/><path d=\"M5.5 11.8l12-4.6c.5-.2 1 .1.8.9l-2 9.4c-.1.6-.5.8-1 .5l-2.8-2.1-1.3 1.3c-.2.2-.4.2-.5 0l-.5-2.8-4.4-1.4c-.6-.2-.6-.6.7-1.2z\" fill=\"#fff\"/></svg>Telegram</a>'
+                + '<a href="tel:+79130998250" style="color:var(--accent);font-weight:600;text-decoration:none">📞 +7 913 099-82-50</a>'
+                + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="color:var(--accent);font-weight:600;text-decoration:none">✈️ Telegram</a>'
                 + '</span>';
             if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(_tlb, wrap.nextSibling);
         }
@@ -2129,7 +2146,6 @@ return { barcode: item.barcode, packQty, autoDivFactor,
             document.getElementById('matchByCross').textContent = '—';
             document.getElementById('noMatchCount').textContent = '—';
             document.getElementById('coveragePct').textContent = '—';
-            const _lp2=document.getElementById('legendPanel');if(_lp2)_lp2.style.display='none';
         }
     }
 
@@ -3587,17 +3603,6 @@ manageTemplatesBtn.addEventListener("click", e => { e.stopPropagation(); renderT
 closeTemplatesModal.addEventListener("click", () => { templatesModal.style.display = "none"; });
 templatesModal.addEventListener("click", e => { if (e.target === templatesModal) templatesModal.style.display = "none"; });
 
-(function() {
-  const btn = document.getElementById('colDetectManualToggle');
-  const body = document.getElementById('colDetectManualBody');
-  const arrow = document.getElementById('colDetectManualArrow');
-  if (btn && body) {
-    btn.addEventListener('click', function() {
-      const open = body.classList.toggle('open');
-      if (arrow) arrow.textContent = open ? '▼' : '▶';
-    });
-  }
-})();
 
 function _updateColSettingsBadge() {
   const badge = document.getElementById('colSettingsSourceBadge');
@@ -9065,6 +9070,11 @@ function _renderLicenseSidebar(lic) {
     block.innerHTML = '<div style="padding:7px 10px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-md)">'
       + '<div style="font-size:18px;font-weight:700;color:' + color + ';line-height:1.1">' + days + ' ' + _pluralDays(days) + '</div>'
       + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px">Trial · осталось до конца</div>'
+      + '<div style="font-size:10px;color:var(--text-secondary);margin-top:5px">Для продления:</div>'
+      + '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
+      + '<a href="tel:+79130998250" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:600">📞 Позвонить</a>'
+      + '<span style="color:var(--text-muted);font-size:10px">·</span>'
+      + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;font-weight:600">✈️ Telegram</a>'
       + '</div></div>';
   } else if (lic.status === 'grace') {
     block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
@@ -9094,8 +9104,8 @@ function _showTrialBanner(lic) {
   banner.innerHTML = '<span style="font-weight:700">⏳ Trial-лицензия — осталось ' + days + ' ' + _pluralDays(days) + '</span>'
     + '<span>Экспорт Excel и ZIP недоступен.</span>'
     + '<span style="margin-left:auto;display:flex;gap:10px">'
-    + '<a href="tel:+79130998250" style="display:inline-flex;align-items:center;color:#16A34A;font-weight:600;text-decoration:none"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#16A34A\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"display:inline;vertical-align:middle;margin-right:4px\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.88a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z\"/></svg>+7 913 099-82-50</a>'
-    + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="display:inline-flex;align-items:center;color:var(--accent);font-weight:600;text-decoration:none"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\" style=\"display:inline;vertical-align:middle;margin-right:4px\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"#3B6FD4\"/><path d=\"M5.5 11.8l12-4.6c.5-.2 1 .1.8.9l-2 9.4c-.1.6-.5.8-1 .5l-2.8-2.1-1.3 1.3c-.2.2-.4.2-.5 0l-.5-2.8-4.4-1.4c-.6-.2-.6-.6.7-1.2z\" fill=\"#fff\"/></svg>Telegram</a>'
+    + '<a href="tel:+79130998250" style="color:var(--accent);font-weight:600;text-decoration:none">📞 +7 913 099-82-50</a>'
+    + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="color:var(--accent);font-weight:600;text-decoration:none">✈️ Telegram</a>'
     + '</span>';
   main.prepend(banner);
 }
