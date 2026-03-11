@@ -228,13 +228,15 @@ window._doSwitchUser = function() {
   var modal = document.getElementById('_switchUserModal'); if (modal) modal.remove();
   // 8. Блокируем карточки прайсов
   if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
-  _licKeyBarSetActive(null);
   // Возвращаем demo-режим после сброса
   window.LICENSE = Object.freeze({ status: 'valid', plan: 'full', client: 'auto', daysLeft: 0 });
+  // Сайдбар и баннер — сразу, синхронно
+  if (typeof _renderLicenseSidebar === 'function') _renderLicenseSidebar(window.LICENSE);
+  if (typeof _showDemoBanner === 'function') _showDemoBanner();
+  _licKeyBarSetActive(window.LICENSE);
+  // Карточки прайсов — в rAF (требуют layout)
   requestAnimationFrame(function() {
     if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
-    if (typeof _showDemoBanner === 'function') _showDemoBanner();
-    if (typeof _renderLicenseSidebar === 'function') _renderLicenseSidebar(window.LICENSE);
   });
   if (typeof showToast === 'function') showToast('Данные сброшены — введите новый ключ лицензии', 'ok');
 };
@@ -348,28 +350,57 @@ function _licKeyBarSetActive(lic) {
   }
 
   // Компактный баннер активной лицензии
-  var isGrace = lic.status === 'grace';
-  var bg      = isGrace ? 'var(--amber-bg)'   : 'var(--green-bg)';
-  var brd     = isGrace ? '#FDE68A'            : '#A7F3D0';
-  var clr     = isGrace ? 'var(--amber-dark)'  : 'var(--green-dark)';
-  var txt     = isGrace
+  var isGrace  = lic.status === 'grace';
+  var _expires = lic.raw && lic.raw.expires;
+  var _forever = _expires === '2099-12-31';
+  var _contact = (lic.raw && lic.raw.contact) || '';
+
+  var bg  = isGrace ? 'var(--amber-bg)' : 'var(--green-bg)';
+  var brd = isGrace ? '#FDE68A'         : '#A7F3D0';
+  var clr = isGrace ? 'var(--amber-dark)' : 'var(--green-dark)';
+
+  var statusTxt = isGrace
     ? ('⚠️ Grace · ' + (lic.daysPast || 0) + '/3 дн.')
     : '✅ Лицензия активна';
+
+  var subParts = [];
+  if (!isGrace && !_forever && lic.daysLeft !== undefined) {
+    var _dc = lic.daysLeft <= 14 ? 'var(--red)' : (lic.daysLeft <= 30 ? 'var(--amber)' : clr);
+    subParts.push('<span style="font-weight:600;color:' + _dc + '">' + lic.daysLeft + ' ' + _pluralDays(lic.daysLeft) + '</span>');
+  } else if (!isGrace && _forever) {
+    subParts.push('<span style="opacity:.7">∞ бессрочная</span>');
+  }
+  if (_contact) subParts.push('<span style="opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escHtml(_contact) + '">📞 ' + _escHtml(_contact) + '</span>');
 
   bar.style.padding = '6px 14px 6px';
   bar.style.alignItems = 'center';
   bar.innerHTML = '';
 
   var banner = document.createElement('div');
-  banner.style.cssText = 'display:flex;align-items:center;gap:10px;flex:1;padding:6px 12px;background:' + bg + ';border:1px solid ' + brd + ';border-radius:var(--radius-md);';
+  banner.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;padding:6px 10px;background:' + bg + ';border:1px solid ' + brd + ';border-radius:var(--radius-md);min-width:0;';
 
+  var leftCol = document.createElement('div');
+  leftCol.style.cssText = 'flex:1;min-width:0;';
+
+  var topRow = document.createElement('div');
+  topRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
   var badgeEl = document.createElement('span');
-  badgeEl.style.cssText = 'font-size:var(--fz-xs);font-weight:700;color:' + clr + ';white-space:nowrap;';
-  badgeEl.textContent = txt;
-
+  badgeEl.style.cssText = 'font-size:var(--fz-xs);font-weight:700;color:' + clr + ';white-space:nowrap;flex-shrink:0;';
+  badgeEl.textContent = statusTxt;
   var clientEl = document.createElement('span');
-  clientEl.style.cssText = 'font-size:var(--fz-xs);color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  clientEl.style.cssText = 'font-size:var(--fz-xs);color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
   clientEl.textContent = lic.client || '';
+  topRow.appendChild(badgeEl);
+  topRow.appendChild(clientEl);
+
+  leftCol.appendChild(topRow);
+
+  if (subParts.length) {
+    var subRow = document.createElement('div');
+    subRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-top:2px;font-size:var(--fz-xs);color:' + clr + ';flex-wrap:nowrap;overflow:hidden;';
+    subRow.innerHTML = subParts.join('');
+    leftCol.appendChild(subRow);
+  }
 
   var logoutBtn = document.createElement('button');
   logoutBtn.className = 'btn';
@@ -378,7 +409,8 @@ function _licKeyBarSetActive(lic) {
   logoutBtn.innerHTML = '<i data-lucide="log-out"></i>';
   logoutBtn.onclick = function() { window.switchUserConfirm(); };
 
-  banner.appendChild(badgeEl); banner.appendChild(clientEl); banner.appendChild(logoutBtn);
+  banner.appendChild(leftCol);
+  banner.appendChild(logoutBtn);
   bar.appendChild(banner);
 
   var st2 = document.getElementById('licKeyStatus');
@@ -9187,21 +9219,39 @@ function _renderLicenseSidebar(lic) {
   block.style.cssText = 'padding:8px 12px 6px;border-top:1px solid var(--border);margin-top:4px;box-sizing:border-box;width:100%';
 
   if (lic.status === 'valid' && lic.plan === 'full') {
-    block.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--green-bg);border:1px solid #A7F3D0;border-radius:var(--radius-md)">'
-      + '<span style="font-size:12px">✅</span>'
-      + '<div style="font-size:10px;color:var(--green-dark);line-height:1.3">'
-      + '<div style="font-weight:700">Лицензия активна</div>'
-      + '<div style="opacity:.8">' + _escHtml(lic.client) + '</div>'
-      + '</div></div>';
+    var _expires   = lic.raw && lic.raw.expires;
+    var _forever   = _expires === '2099-12-31';
+    var _contact   = (lic.raw && lic.raw.contact) || '';
+    var _daysLeft  = lic.daysLeft;
+    var _daysColor = _daysLeft <= 14 ? 'var(--red)' : (_daysLeft <= 30 ? 'var(--amber)' : 'var(--green-dark)');
+    var _daysLine  = _forever
+      ? '<div style="font-size:10px;color:var(--green-dark);opacity:.7">∞ Бессрочная</div>'
+      : '<div style="font-size:10px;font-weight:700;color:' + _daysColor + '">Осталось: ' + _daysLeft + ' ' + _pluralDays(_daysLeft) + '</div>';
+    var _contactLine = _contact
+      ? '<div style="font-size:10px;color:var(--text-secondary);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escHtml(_contact) + '">📞 ' + _escHtml(_contact) + '</div>'
+      : '';
+    block.innerHTML = '<div style="padding:6px 8px;background:var(--green-bg);border:1px solid #A7F3D0;border-radius:var(--radius-md)">'
+      + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
+      + '<span style="font-size:11px">✅</span>'
+      + '<div style="font-size:11px;font-weight:700;color:var(--green-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escHtml(lic.client) + '</div>'
+      + '</div>'
+      + _daysLine
+      + _contactLine
+      + '</div>';
   } else if (lic.status === 'valid' && lic.client === 'auto') {
     block.innerHTML = '<div style="padding:7px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-md)">'
       + '<div style="font-size:11px;font-weight:700;color:var(--accent);line-height:1.3">Demo-режим</div>'
       + '<div style="font-size:10px;color:var(--text-secondary);margin-top:2px">Введите ключ или загрузите файл памяти</div>'
       + '</div>';
   } else if (lic.status === 'grace') {
+    var _gContact = (lic.raw && lic.raw.contact) || '';
+    var _gContactLine = _gContact
+      ? '<div style="font-size:10px;color:var(--red);margin-top:1px;opacity:.8">📞 ' + _escHtml(_gContact) + '</div>'
+      : '';
     block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
-      + '<div style="font-size:12px;font-weight:700;color:var(--red)">⚠️ Лицензия истекла</div>'
-      + '<div style="font-size:10px;color:var(--red);margin-top:2px">Grace-период: ' + (lic.daysPast || 0) + '/' + 3 + ' дн.</div>'
+      + '<div style="font-size:11px;font-weight:700;color:var(--red)">' + _escHtml(lic.client) + '</div>'
+      + '<div style="font-size:10px;font-weight:700;color:var(--red);margin-top:2px">⚠️ Grace: ' + (lic.daysPast || 0) + '/' + 3 + ' дн.</div>'
+      + _gContactLine
       + '</div>';
   } else if (lic.status === 'expired') {
     block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
