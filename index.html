@@ -31,26 +31,53 @@
 
 </head>
 <body>
-<!-- ═══ MOBILE TOP BAR (outside app-layout for full viewport width) ═══ -->
+<!-- ═══ MOBILE TOP BAR — outside app-layout for full viewport width ═══ -->
 <div id="mobileTopBar">
-  <button id="mobileMenuBtn" onclick="toggleMobileSidebar()" title="Меню">
+  <button id="mobileMenuBtn" onclick="toggleMobileSidebar()" title="Меню" aria-label="Открыть меню">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
     </svg>
   </button>
   <div id="mobileTopBarBrand">
     <div id="mobileTopBarBrandIcon">
-      <svg viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <rect fill="white" height="10" rx="5" width="45" x="20" y="25"></rect>
-        <rect fill="white" height="10" rx="5" width="30" x="20" y="45"></rect>
-        <rect fill="white" height="10" rx="5" width="20" x="20" y="65"></rect>
-        <circle cx="65" cy="55" fill="none" r="14" stroke="white" stroke-width="8"></circle>
-        <line stroke="white" stroke-linecap="round" stroke-width="8" x1="75" x2="85" y1="65" y2="75"></line>
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect fill="white" height="10" rx="5" width="45" x="20" y="25"/>
+        <rect fill="white" height="10" rx="5" width="30" x="20" y="45"/>
+        <rect fill="white" height="10" rx="5" width="20" x="20" y="65"/>
+        <circle cx="65" cy="55" fill="none" r="14" stroke="white" stroke-width="8"/>
+        <line stroke="white" stroke-linecap="round" stroke-width="8" x1="75" x2="85" y1="65" y2="75"/>
       </svg>
     </div>
   </div>
   <div id="mobileTopBarTitle">Прайс-менеджер</div>
 </div>
+
+<!-- ═══ DESKTOP HINT POPUP (mobile only) ═══ -->
+<div id="desktopHintPopup">
+  <div class="dh-card">
+    <div class="dh-drag-handle"></div>
+    <div class="dh-body">
+      <div class="dh-icon-wrap">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 3H4a1 1 0 00-1 1v13a1 1 0 001 1h7v2H8v2h8v-2h-3v-2h7a1 1 0 001-1V4a1 1 0 00-1-1zm-1 13H5V5h14v11z"/>
+        </svg>
+      </div>
+      <div class="dh-title">Лучше на компьютере 💻</div>
+      <div class="dh-text">
+        Прайс-менеджер — инструмент для работы с таблицами и прайс-листами.<br>
+        <strong>На десктопе</strong> вы получите полный доступ ко всем функциям: загрузка файлов, мониторинг цен и работа с базой кросс-кодов.
+      </div>
+      <div class="dh-actions">
+        <button class="dh-btn-continue" onclick="closeDesktopHint()">Продолжить в браузере</button>
+        <button class="dh-btn-close" onclick="closeDesktopHint(true)">Больше не показывать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SIDEBAR OVERLAY ═══ -->
+<div id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
 <div class="app-layout">
 <!-- ═══ SIDEBAR ═══ -->
 <aside class="app-sidebar">
@@ -2206,65 +2233,66 @@ function showUpdateToast() {
     </div>
   </div>
 </div>
-<!-- ═══ MOBILE OVERLAY ═══ -->
-<div id="mobileOverlay" onclick="closeMobileSidebar()"></div>
-
-<!-- ═══ MOBILE SIDEBAR JS ═══ -->
+<!-- ═══ MOBILE JS ═══ -->
 <script>
-(function(){
-  var sidebar  = document.querySelector('.app-sidebar');
-  var overlay  = document.getElementById('mobileOverlay');
+(function () {
+  var sidebar = document.querySelector('.app-sidebar');
+  var overlay = document.getElementById('mobileOverlay');
   var topTitle = document.getElementById('mobileTopBarTitle');
 
-  function isMobile(){ return window.innerWidth <= 768; }
+  function isMobile() { return window.innerWidth <= 768; }
 
-  window.toggleMobileSidebar = function(){
-    if(!isMobile()) return;
+  /* ── Sidebar drawer ── */
+  window.toggleMobileSidebar = function () {
+    if (!isMobile()) return;
     var open = sidebar.classList.toggle('mobile-open');
     overlay.classList.toggle('active', open);
     document.body.style.overflow = open ? 'hidden' : '';
   };
-
-  window.closeMobileSidebar = function(){
-    if(!isMobile()) return;
+  window.closeMobileSidebar = function () {
     sidebar.classList.remove('mobile-open');
     overlay.classList.remove('active');
     document.body.style.overflow = '';
   };
 
-  /* Close sidebar when a nav tab is tapped on mobile */
-  document.querySelectorAll('.nav-tab').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      if(isMobile()){
-        closeMobileSidebar();
-        /* Update top bar title */
-        var lbl = btn.getAttribute('data-label');
-        if(lbl && topTitle) topTitle.textContent = lbl;
-      }
-    });
-  });
-
-  /* Update top bar title on pane switch (desktop compatibility) */
-  document.querySelectorAll('.nav-tab').forEach(function(btn){
-    btn.addEventListener('click', function(){
+  /* Close + update title on nav tap */
+  document.querySelectorAll('.nav-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
       var lbl = btn.getAttribute('data-label');
-      if(lbl && topTitle) topTitle.textContent = lbl;
+      if (lbl && topTitle) topTitle.textContent = lbl;
+      if (isMobile()) closeMobileSidebar();
     });
   });
 
-  /* Close on Escape */
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') closeMobileSidebar();
-  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMobileSidebar(); });
+  window.addEventListener('resize', function () { if (!isMobile()) closeMobileSidebar(); });
 
-  /* Close sidebar when orientation changes to landscape (more room) */
-  window.addEventListener('resize', function(){
-    if(!isMobile()){
-      sidebar.classList.remove('mobile-open');
-      overlay.classList.remove('active');
-      document.body.style.overflow = '';
+  /* ── Desktop hint popup ── */
+  var HINT_KEY = 'pm_desktop_hint_dismissed';
+
+  window.closeDesktopHint = function (forever) {
+    var el = document.getElementById('desktopHintPopup');
+    if (!el) return;
+    if (forever) {
+      try { localStorage.setItem(HINT_KEY, '1'); } catch (e) {}
     }
-  });
+    el.classList.remove('show');
+  };
+
+  function maybeShowHint() {
+    if (!isMobile()) return;
+    try { if (localStorage.getItem(HINT_KEY)) return; } catch (e) {}
+    var el = document.getElementById('desktopHintPopup');
+    if (!el) return;
+    setTimeout(function () { el.classList.add('show'); }, 600);
+  }
+
+  /* Show after page fully loaded */
+  if (document.readyState === 'complete') {
+    maybeShowHint();
+  } else {
+    window.addEventListener('load', maybeShowHint);
+  }
 })();
 </script>
 </body>
