@@ -9243,7 +9243,7 @@ function _renderLicenseSidebar(lic) {
   block.id = 'licSidebarBlock';
   block.style.cssText = 'padding:8px 12px 6px;border-top:1px solid var(--border);margin-top:4px;box-sizing:border-box;width:100%';
 
-  if (lic.status === 'valid' && lic.plan === 'full') {
+  if (lic.status === 'valid' && lic.plan === 'full' && lic.client !== 'auto') {
     var _expires   = lic.raw && lic.raw.expires;
     var _forever   = _expires === '2099-12-31';
     var _contact   = (lic.raw && lic.raw.contact) || '';
