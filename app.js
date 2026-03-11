@@ -238,6 +238,7 @@ window._doSwitchUser = function() {
     if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
     if (typeof _showDemoBanner === 'function') _showDemoBanner();
     if (typeof _renderLicenseSidebar === 'function') _renderLicenseSidebar(window.LICENSE);
+    _licKeyBarSetActive(window.LICENSE);
   });
   if (typeof showToast === 'function') showToast('Данные сброшены — введите новый ключ лицензии', 'ok');
 };
@@ -3082,6 +3083,7 @@ function _doLoadJsonFile(file, afterLoad) {
         // Применяем UI лицензии
         _applyLicenseUI(lic);
         _renderLicKeyStatus(lic);
+        _licKeyBarSetActive(lic);
       });
 
     } catch(err) { showToast('Ошибка чтения JSON: ' + err.message, 'err'); }
@@ -9241,9 +9243,10 @@ function _renderLicenseSidebar(lic) {
         + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px">Trial · осталось до конца</div>'
         + '</div>';
     }
+  } else if (lic.status === 'grace') {
     block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
       + '<div style="font-size:12px;font-weight:700;color:var(--red)">⚠️ Лицензия истекла</div>'
-      + '<div style="font-size:10px;color:var(--red);margin-top:2px">Grace-период: ' + lic.daysPast + '/' + 3 + ' дн.</div>'
+      + '<div style="font-size:10px;color:var(--red);margin-top:2px">Grace-период: ' + (lic.daysPast || 0) + '/' + 3 + ' дн.</div>'
       + '</div>';
   } else if (lic.status === 'expired') {
     block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
