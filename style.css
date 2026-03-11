@@ -569,13 +569,13 @@ svg.lucide {
 .feedback-img-clear:hover{background:var(--red)}
 
 /* ═══════════════════════════════════════════════════════════════
+
+/* ═══════════════════════════════════════════════════════════════
    MOBILE ADAPTATION  (≤ 768px)
 ═══════════════════════════════════════════════════════════════ */
 
-/* Mobile top bar — visible only on mobile */
-#mobileTopBar {
-  display: none;
-}
+/* Mobile top bar — hidden on desktop */
+#mobileTopBar { display: none; }
 
 /* Mobile overlay backdrop */
 #mobileOverlay {
@@ -590,11 +590,23 @@ svg.lucide {
 
 @media (max-width: 768px) {
 
-  /* ── Top bar ──────────────────────────────────────────────── */
+  /* ── Body / root layout ──────────────────────────────────── */
+  body { overflow-x: hidden; }
+
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    width: 100%;
+  }
+
+  /* ── Mobile top bar ──────────────────────────────────────── */
   #mobileTopBar {
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
     position: sticky;
     top: 0;
     z-index: 250;
@@ -621,6 +633,19 @@ svg.lucide {
   }
   #mobileMenuBtn:hover { background: var(--accent-lite); border-color: var(--accent); }
   #mobileMenuBtn svg { width: 18px; height: 18px; }
+  #mobileTopBarBrand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  #mobileTopBarBrandIcon {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #mobileTopBarBrandIcon svg { width: 13px; height: 13px; fill: white; }
   #mobileTopBarTitle {
     font-size: var(--fz-base);
     font-weight: 700;
@@ -630,45 +655,32 @@ svg.lucide {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  #mobileTopBarBrand {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  #mobileTopBarBrandIcon {
-    width: 24px; height: 24px;
-    background: var(--accent);
-    border-radius: 5px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  #mobileTopBarBrandIcon svg { width: 13px; height: 13px; fill: white; }
 
-  /* ── Layout ──────────────────────────────────────────────── */
-  .app-layout { flex-direction: column; }
-  .app-main   { width: 100%; min-width: 0; }
+  /* ── Main content area takes full width ──────────────────── */
+  .app-main { width: 100%; min-width: 0; flex: 1; }
 
   /* ── Sidebar: slide-in drawer ────────────────────────────── */
   .app-sidebar {
-    position: fixed;
+    position: fixed !important;
     left: 0; top: 0; bottom: 0;
-    height: 100dvh;
-    width: var(--sidebar-w) !important;
-    min-width: var(--sidebar-w) !important;
+    height: 100dvh !important;
+    width: 260px !important;
+    min-width: 260px !important;
     transform: translateX(-110%);
     transition: transform 260ms cubic-bezier(.4,0,.2,1), box-shadow 260ms;
     z-index: 300;
     box-shadow: none;
-    overflow-x: hidden;
   }
   .app-sidebar.mobile-open {
-    transform: translateX(0);
-    box-shadow: 6px 0 24px rgba(0,0,0,0.18);
+    transform: translateX(0) !important;
+    box-shadow: 6px 0 24px rgba(0,0,0,0.22);
   }
-  /* On mobile: undo "collapsed" visual narrowing — show full sidebar */
-  .app-sidebar.collapsed {
-    width: var(--sidebar-w) !important;
-    min-width: var(--sidebar-w) !important;
+  /* Undo "collapsed" narrowing — always show full sidebar in drawer */
+  .app-sidebar.collapsed,
+  .app-sidebar.collapsed.mobile-open {
+    width: 260px !important;
+    min-width: 260px !important;
+    overflow-x: hidden !important;
   }
   .app-sidebar.collapsed .sidebar-brand-text,
   .app-sidebar.collapsed .sidebar-brand-sub,
@@ -688,38 +700,88 @@ svg.lucide {
     gap: 10px !important;
     justify-content: flex-start !important;
   }
-  /* Hide desktop chevron toggle in drawer */
+  /* Hide desktop chevron toggle */
   .sidebar-toggle { display: none !important; }
 
-  /* ── Container & spacing ─────────────────────────────────── */
-  .container { margin: 8px; padding: 12px; }
-  .pane-title { margin: -12px -12px 12px; flex-wrap: wrap; gap: 6px; }
-  .pane-title-extra { flex-wrap: wrap; }
+  /* ── Container & pane padding ────────────────────────────── */
+  .container { margin: 8px; padding: 12px; overflow: hidden; }
+  .pane-title { margin: -12px -12px 12px; flex-wrap: wrap; }
+  .pane-title-extra { flex-wrap: wrap; gap: 4px; }
 
   /* ── Controls / button groups ────────────────────────────── */
-  .controls { flex-wrap: wrap; gap: 6px; }
-  .controls-group { flex-wrap: wrap; }
-  .obr-upload-header { flex-wrap: wrap; gap: 6px; }
-  .obr-upload-btns  { flex-wrap: wrap; }
-  #deltaPanelWrap   { flex-wrap: wrap; }
+  /* Wrap the whole controls bar so it scrolls horizontally */
+  .controls {
+    overflow-x: auto;
+    overflow-y: visible;
+    flex-wrap: nowrap;
+    gap: 5px;
+    padding-bottom: 4px; /* room for scrollbar */
+    -webkit-overflow-scrolling: touch;
+  }
+  .controls::-webkit-scrollbar { height: 3px; }
+  .controls::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
 
-  /* ── Monitor info panel ──────────────────────────────────── */
-  .monitor-info-grid { flex-wrap: wrap; }
-  .mip-item { min-width: 70px; }
+  /* Button groups inside controls keep their shape, don't shrink */
+  .controls-group { flex-shrink: 0; flex-wrap: nowrap; }
+
+  /* ── Obr upload header ───────────────────────────────────── */
+  .obr-upload-header {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .obr-upload-btns { flex-wrap: nowrap; flex-shrink: 0; }
+  .obr-upload-card { flex-shrink: 0; }
+
+  /* ── Tables: horizontal scroll, NO compression ───────────── */
+  .table-wrapper,
+  #mainTableWrap,
+  #matcherTableWrap,
+  #brandTableWrap,
+  #jeTableWrap,
+  .skipped-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  /* Do NOT change table min-width — let them scroll naturally */
+  #mainTable,
+  #matcherTable,
+  #brandDataTable,
+  #jeTable { min-width: 500px; }
+
+  /* Max heights for tall tables */
+  #mainTableWrap  { max-height: calc(100dvh - 230px); }
+  #matcherTableWrap { max-height: calc(100dvh - 270px); }
+  #brandTableWrap { max-height: 50vh; }
+  #pane-prepare .xl-table-wrap { max-height: calc(100dvh - 210px); }
+
+  /* ── Delta filter panel ──────────────────────────────────── */
+  #deltaPanelWrap {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  #deltaPanelWrap .delta-group { flex-shrink: 0; }
 
   /* ── Prepare pane toolbar ────────────────────────────────── */
-  #pane-prepare .xl-toolbar { flex-wrap: wrap; gap: 4px; }
-  #pane-prepare .xl-statusbar { flex-wrap: wrap; gap: 10px; }
-  #pane-prepare .xl-table-wrap { max-height: calc(100dvh - 220px); }
+  #pane-prepare .xl-toolbar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+  #pane-prepare .xl-group { flex-shrink: 0; }
+  #pane-prepare .xl-statusbar { flex-wrap: wrap; gap: 6px; }
 
-  /* ── Matcher table ───────────────────────────────────────── */
-  #matcherTableWrap { max-height: calc(100dvh - 260px); }
-
-  /* ── Main monitor table ──────────────────────────────────── */
-  #mainTableWrap { max-height: calc(100dvh - 220px); }
-
-  /* ── Brand table ─────────────────────────────────────────── */
-  #brandTableWrap { max-height: 48vh; }
+  /* ── Monitor info panel ──────────────────────────────────── */
+  .monitor-info-panel { padding: 6px 8px; }
+  .monitor-info-grid { flex-wrap: wrap; }
+  .mip-item { min-width: 64px; padding: 5px 0; }
+  .mip-val  { font-size: 13px; }
+  .mip-lbl  { font-size: 8px; }
 
   /* ── Modals: full-width on mobile ────────────────────────── */
   .modal-overlay, .obr-modal, #bcAddModal, #obrNextStepModal { padding: 8px; }
@@ -730,29 +792,41 @@ svg.lucide {
   .modal-inner.w640,
   .modal-w480,
   .bc-add-modal-inner,
-  .obr-modal-box { width: 100% !important; max-width: calc(100vw - 16px) !important; max-height: 92dvh; overflow-y: auto; }
+  .obr-modal-box {
+    width: 100% !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
   .obr-modal-body { max-height: 70dvh; }
+  .modal-footer, .obr-modal-footer { flex-wrap: wrap; gap: 6px; }
+  .modal-header { flex-wrap: wrap; gap: 4px; }
 
   /* ── Cart qty panel ──────────────────────────────────────── */
   .cart-qty-box {
     position: fixed !important;
-    right: 8px !important; left: 8px !important;
-    top: auto !important; bottom: 16px !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 16px !important;
+    top: auto !important;
     transform: none !important;
     width: auto !important;
   }
-  #cartQtyModal { right: 0; top: 0; bottom: 0; left: 0; }
-
-  /* ── Cart modal ──────────────────────────────────────────── */
+  #cartQtyModal { inset: 0; }
   .cart-modal-box { width: 100% !important; max-height: 94dvh; }
   .cart-modal-actions { flex-wrap: wrap; gap: 4px; }
 
   /* ── Help modal ──────────────────────────────────────────── */
   #helpModal { padding: 8px; align-items: flex-end; justify-content: center; }
-  .help-modal-box { width: 100% !important; max-height: 88dvh; transform: translateY(24px); opacity: 0; }
+  .help-modal-box {
+    width: 100% !important;
+    max-height: 88dvh;
+    transform: translateY(24px);
+    opacity: 0;
+  }
   #helpModal.open .help-modal-box { transform: translateY(0); opacity: 1; }
 
-  /* ── Cat excl modal ──────────────────────────────────────── */
+  /* ── CatExcl modal ───────────────────────────────────────── */
   #catExclModal .cem-box {
     width: 100% !important;
     max-width: calc(100vw - 16px) !important;
@@ -764,54 +838,42 @@ svg.lucide {
     min-width: 0 !important;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 200px;
+    max-height: 180px;
   }
-  #catExclModal .cem-chips-wrap { overflow-y: auto; }
+  #catExclModal .cem-footer { flex-wrap: wrap; gap: 6px; }
 
   /* ── Toasts ──────────────────────────────────────────────── */
   #toastRack { right: 8px; left: 8px; max-width: 100%; bottom: 12px; }
 
+  /* ── Obr queue bar ───────────────────────────────────────── */
+  .obr-queue-bar { flex-wrap: wrap; gap: 8px; }
+  .obr-queue-chips { display: none; }
+
+  /* ── Je new row ──────────────────────────────────────────── */
+  .je-newrow { flex-wrap: wrap; }
+  .je-search-row { flex-wrap: wrap; }
+
+  /* ── Brand search row ────────────────────────────────────── */
+  .brand-search-row { flex-wrap: wrap; }
+  .brand-subtab-toolbar { flex-wrap: wrap; }
+
+  /* ── Filter row ──────────────────────────────────────────── */
+  .filter-row { flex-wrap: wrap; }
+
   /* ── Matcher stats ───────────────────────────────────────── */
-  .mstat { padding: 8px 4px; }
+  .mstat { padding: 8px 2px; }
   .mstat-val { font-size: 16px; }
   .mstat-lbl { font-size: 9px; }
 
-  /* ── Obr queue bar ───────────────────────────────────────── */
-  .obr-queue-bar { flex-wrap: wrap; gap: 8px; }
-  .obr-queue-chips { display: none; } /* скрываем чипы на маленьком экране */
+  /* ── Error log modal ─────────────────────────────────────── */
+  #errLogModal > div {
+    width: calc(100vw - 16px) !important;
+    max-height: 88dvh !important;
+  }
 
-  /* ── Table zoom bar ──────────────────────────────────────── */
+  /* ── Zoom bar ────────────────────────────────────────────── */
   #tableZoomBar { justify-content: flex-start; }
 
-  /* ── Buttons in modal footers ────────────────────────────── */
-  .modal-footer { flex-wrap: wrap; gap: 6px; }
-  .obr-modal-footer { flex-wrap: wrap; gap: 6px; }
-
-  /* ── je-newrow ────────────────────────────────────────────── */
-  .je-newrow { flex-wrap: wrap; }
-
-  /* ── Brand subtab toolbar ────────────────────────────────── */
-  .brand-subtab-toolbar { flex-wrap: wrap; }
-
-  /* ── filter-row ──────────────────────────────────────────── */
-  .filter-row { flex-wrap: wrap; }
-
-  /* ── je-search-row ────────────────────────────────────────── */
-  .je-search-row { flex-wrap: wrap; }
-
-  /* ── pane-prepare xl-group ────────────────────────────────── */
-  #pane-prepare .xl-group { flex-wrap: wrap; }
-
-  /* ── Obr nextstep btns ────────────────────────────────────── */
-  .obr-nextstep-btn { padding: 10px 14px; font-size: var(--fz-base); }
-
-  /* ── Sidebar modal footer ─────────────────────────────────── */
-  #catExclModal .cem-footer { flex-wrap: wrap; gap: 8px; }
-  #catExclModal .cem-footer-note { font-size: 10px; }
-
-  /* ── Error log modal ──────────────────────────────────────── */
-  #errLogModal > div { width: calc(100vw - 16px) !important; max-height: 88dvh !important; }
-
-  /* ── Feedback modal ───────────────────────────────────────── */
-  #feedbackModal .modal-inner { max-height: 92dvh; overflow-y: auto; }
+  /* ── Obr nextstep btns ───────────────────────────────────── */
+  .obr-nextstep-btn { padding: 10px 12px; }
 }
