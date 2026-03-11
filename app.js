@@ -86,7 +86,15 @@ try { window._graceOverlayDismissed = sessionStorage.getItem('_graceOverlayDismi
 (function() {
   try {
     var saved = localStorage.getItem('pm_license_block');
-    if (!saved) return;
+    if (!saved) {
+      // Нет сохранённой лицензии — автоматически включаем trial-режим:
+      // карточки «Мой прайс» и «Прайсы» разблокированы, без баннера
+      window.LICENSE = Object.freeze({ status: 'valid', plan: 'trial', client: 'auto', daysLeft: 0 });
+      requestAnimationFrame(function() {
+        if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+      });
+      return;
+    }
     var json = JSON.parse(saved);
     LicenseManager.validate(json).then(function(lic) {
       if (lic.status === 'valid' || lic.status === 'grace') {
@@ -8987,10 +8995,10 @@ function _applyLicenseUI(lic) {
     _showLicenseOverlay(lic, false); // нет grace — полный блок
   } else if (lic.status === 'grace' && !window._graceOverlayDismissed) {
     _showLicenseOverlay(lic, true);  // grace — с предупреждением, доступ есть
-  } else if (lic.status === 'valid' && lic.plan === 'trial') {
+  } else if (lic.status === 'valid' && lic.plan === 'trial' && lic.client !== 'auto') {
     _showTrialBanner(lic);
   }
-  // valid + full — ничего не показываем, элементы уже убраны выше
+  // valid + full или auto-trial — ничего не показываем, элементы уже убраны выше
 }
 
 // ── Перехватчик кликов по заблокированным кнопкам экспорта (один раз) ─────
@@ -9076,12 +9084,20 @@ function _renderLicenseSidebar(lic) {
       + '<div style="opacity:.8">' + _escHtml(lic.client) + '</div>'
       + '</div></div>';
   } else if (lic.status === 'valid' && lic.plan === 'trial') {
-    var days = lic.daysLeft;
-    var color = days <= 5 ? 'var(--red)' : 'var(--amber)';
-    block.innerHTML = '<div style="padding:7px 10px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-md)">'
-      + '<div style="font-size:18px;font-weight:700;color:' + color + ';line-height:1.1">' + days + ' ' + _pluralDays(days) + '</div>'
-      + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px">Trial · осталось до конца</div>'
-      + '</div></div>';
+    if (lic.client === 'auto') {
+      // Автоматический trial без ключа — показываем нейтральный бейдж
+      block.innerHTML = '<div style="padding:7px 10px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-md)">'
+        + '<div style="font-size:11px;font-weight:700;color:var(--amber-dark);line-height:1.3">Trial-режим</div>'
+        + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px;opacity:.8">Введите ключ для полного доступа</div>'
+        + '</div></div>';
+    } else {
+      var days = lic.daysLeft;
+      var color = days <= 5 ? 'var(--red)' : 'var(--amber)';
+      block.innerHTML = '<div style="padding:7px 10px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-md)">'
+        + '<div style="font-size:18px;font-weight:700;color:' + color + ';line-height:1.1">' + days + ' ' + _pluralDays(days) + '</div>'
+        + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px">Trial · осталось до конца</div>'
+        + '</div></div>';
+    }
   } else if (lic.status === 'grace') {
     block.innerHTML = '<div style="padding:7px 10px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius-md)">'
       + '<div style="font-size:12px;font-weight:700;color:var(--red)">⚠️ Лицензия истекла</div>'
