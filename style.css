@@ -53,7 +53,9 @@
 #monitorStickyBar.show{display:flex}
 /* Empty states – flush padding (container already provides spacing) */
 #monitorEmptyState.empty-state,
-#matcherEmpty.empty-state{padding:4px 0 0}
+#matcherEmpty.empty-state,
+#jeEmpty.empty-state,
+.brand-empty{padding:4px 0 0}
 /* obrNextStepModal — semi-transparent backdrop */
 #obrNextStepModal.visible{background:rgba(0,0,0,0.35)}
 /* DELTA COLUMN HIGHLIGHT */
