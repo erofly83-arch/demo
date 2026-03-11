@@ -32,6 +32,26 @@
 </head>
 <body>
 <div class="app-layout">
+<!-- ═══ MOBILE TOP BAR ═══ -->
+<div id="mobileTopBar">
+  <button id="mobileMenuBtn" onclick="toggleMobileSidebar()" title="Меню">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <div id="mobileTopBarBrand">
+    <div id="mobileTopBarBrandIcon">
+      <svg viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect fill="white" height="10" rx="5" width="45" x="20" y="25"></rect>
+        <rect fill="white" height="10" rx="5" width="30" x="20" y="45"></rect>
+        <rect fill="white" height="10" rx="5" width="20" x="20" y="65"></rect>
+        <circle cx="65" cy="55" fill="none" r="14" stroke="white" stroke-width="8"></circle>
+        <line stroke="white" stroke-linecap="round" stroke-width="8" x1="75" x2="85" y1="65" y2="75"></line>
+      </svg>
+    </div>
+  </div>
+  <div id="mobileTopBarTitle">Прайс-менеджер</div>
+</div>
 <!-- ═══ SIDEBAR ═══ -->
 <aside class="app-sidebar">
 <div class="sidebar-brand" onclick="toggleSidebar()" style="cursor:pointer;" title="Свернуть/развернуть меню">
@@ -2186,5 +2206,66 @@ function showUpdateToast() {
     </div>
   </div>
 </div>
+<!-- ═══ MOBILE OVERLAY ═══ -->
+<div id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
+<!-- ═══ MOBILE SIDEBAR JS ═══ -->
+<script>
+(function(){
+  var sidebar  = document.querySelector('.app-sidebar');
+  var overlay  = document.getElementById('mobileOverlay');
+  var topTitle = document.getElementById('mobileTopBarTitle');
+
+  function isMobile(){ return window.innerWidth <= 768; }
+
+  window.toggleMobileSidebar = function(){
+    if(!isMobile()) return;
+    var open = sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+  };
+
+  window.closeMobileSidebar = function(){
+    if(!isMobile()) return;
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  };
+
+  /* Close sidebar when a nav tab is tapped on mobile */
+  document.querySelectorAll('.nav-tab').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(isMobile()){
+        closeMobileSidebar();
+        /* Update top bar title */
+        var lbl = btn.getAttribute('data-label');
+        if(lbl && topTitle) topTitle.textContent = lbl;
+      }
+    });
+  });
+
+  /* Update top bar title on pane switch (desktop compatibility) */
+  document.querySelectorAll('.nav-tab').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var lbl = btn.getAttribute('data-label');
+      if(lbl && topTitle) topTitle.textContent = lbl;
+    });
+  });
+
+  /* Close on Escape */
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeMobileSidebar();
+  });
+
+  /* Close sidebar when orientation changes to landscape (more room) */
+  window.addEventListener('resize', function(){
+    if(!isMobile()){
+      sidebar.classList.remove('mobile-open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  });
+})();
+</script>
 </body>
 </html>

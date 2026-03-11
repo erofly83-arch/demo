@@ -567,3 +567,251 @@ svg.lucide {
 .feedback-img-pick:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lite)}
 .feedback-img-clear{position:absolute;top:4px;right:4px;width:20px;height:20px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background 100ms}
 .feedback-img-clear:hover{background:var(--red)}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE ADAPTATION  (≤ 768px)
+═══════════════════════════════════════════════════════════════ */
+
+/* Mobile top bar — visible only on mobile */
+#mobileTopBar {
+  display: none;
+}
+
+/* Mobile overlay backdrop */
+#mobileOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 290;
+  cursor: pointer;
+}
+#mobileOverlay.active { display: block; }
+
+@media (max-width: 768px) {
+
+  /* ── Top bar ──────────────────────────────────────────────── */
+  #mobileTopBar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 250;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 12px;
+    height: 48px;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+  }
+  #mobileMenuBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    flex-shrink: 0;
+    color: var(--text-primary);
+    transition: background 100ms, border-color 100ms;
+  }
+  #mobileMenuBtn:hover { background: var(--accent-lite); border-color: var(--accent); }
+  #mobileMenuBtn svg { width: 18px; height: 18px; }
+  #mobileTopBarTitle {
+    font-size: var(--fz-base);
+    font-weight: 700;
+    color: var(--text-primary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #mobileTopBarBrand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #mobileTopBarBrandIcon {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  #mobileTopBarBrandIcon svg { width: 13px; height: 13px; fill: white; }
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  .app-layout { flex-direction: column; }
+  .app-main   { width: 100%; min-width: 0; }
+
+  /* ── Sidebar: slide-in drawer ────────────────────────────── */
+  .app-sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    height: 100dvh;
+    width: var(--sidebar-w) !important;
+    min-width: var(--sidebar-w) !important;
+    transform: translateX(-110%);
+    transition: transform 260ms cubic-bezier(.4,0,.2,1), box-shadow 260ms;
+    z-index: 300;
+    box-shadow: none;
+    overflow-x: hidden;
+  }
+  .app-sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 6px 0 24px rgba(0,0,0,0.18);
+  }
+  /* On mobile: undo "collapsed" visual narrowing — show full sidebar */
+  .app-sidebar.collapsed {
+    width: var(--sidebar-w) !important;
+    min-width: var(--sidebar-w) !important;
+  }
+  .app-sidebar.collapsed .sidebar-brand-text,
+  .app-sidebar.collapsed .sidebar-brand-sub,
+  .app-sidebar.collapsed .sidebar-section-label,
+  .app-sidebar.collapsed .nav-tab-label,
+  .app-sidebar.collapsed .sidebar-footer,
+  .app-sidebar.collapsed .sidebar-files-section { display: block !important; }
+  .app-sidebar.collapsed .nav-tab {
+    padding: 9px 16px !important;
+    justify-content: flex-start !important;
+  }
+  .app-sidebar.collapsed .nav-tab::after { display: none !important; }
+  .app-sidebar.collapsed .nav-tab-icon { width: 18px !important; font-size: 14px !important; }
+  .app-sidebar.collapsed .sidebar-brand {
+    width: auto !important;
+    padding: 16px 16px 12px !important;
+    gap: 10px !important;
+    justify-content: flex-start !important;
+  }
+  /* Hide desktop chevron toggle in drawer */
+  .sidebar-toggle { display: none !important; }
+
+  /* ── Container & spacing ─────────────────────────────────── */
+  .container { margin: 8px; padding: 12px; }
+  .pane-title { margin: -12px -12px 12px; flex-wrap: wrap; gap: 6px; }
+  .pane-title-extra { flex-wrap: wrap; }
+
+  /* ── Controls / button groups ────────────────────────────── */
+  .controls { flex-wrap: wrap; gap: 6px; }
+  .controls-group { flex-wrap: wrap; }
+  .obr-upload-header { flex-wrap: wrap; gap: 6px; }
+  .obr-upload-btns  { flex-wrap: wrap; }
+  #deltaPanelWrap   { flex-wrap: wrap; }
+
+  /* ── Monitor info panel ──────────────────────────────────── */
+  .monitor-info-grid { flex-wrap: wrap; }
+  .mip-item { min-width: 70px; }
+
+  /* ── Prepare pane toolbar ────────────────────────────────── */
+  #pane-prepare .xl-toolbar { flex-wrap: wrap; gap: 4px; }
+  #pane-prepare .xl-statusbar { flex-wrap: wrap; gap: 10px; }
+  #pane-prepare .xl-table-wrap { max-height: calc(100dvh - 220px); }
+
+  /* ── Matcher table ───────────────────────────────────────── */
+  #matcherTableWrap { max-height: calc(100dvh - 260px); }
+
+  /* ── Main monitor table ──────────────────────────────────── */
+  #mainTableWrap { max-height: calc(100dvh - 220px); }
+
+  /* ── Brand table ─────────────────────────────────────────── */
+  #brandTableWrap { max-height: 48vh; }
+
+  /* ── Modals: full-width on mobile ────────────────────────── */
+  .modal-overlay, .obr-modal, #bcAddModal, #obrNextStepModal { padding: 8px; }
+  .modal-inner,
+  .modal-inner.w380,
+  .modal-inner.w400,
+  .modal-inner.w560,
+  .modal-inner.w640,
+  .modal-w480,
+  .bc-add-modal-inner,
+  .obr-modal-box { width: 100% !important; max-width: calc(100vw - 16px) !important; max-height: 92dvh; overflow-y: auto; }
+  .obr-modal-body { max-height: 70dvh; }
+
+  /* ── Cart qty panel ──────────────────────────────────────── */
+  .cart-qty-box {
+    position: fixed !important;
+    right: 8px !important; left: 8px !important;
+    top: auto !important; bottom: 16px !important;
+    transform: none !important;
+    width: auto !important;
+  }
+  #cartQtyModal { right: 0; top: 0; bottom: 0; left: 0; }
+
+  /* ── Cart modal ──────────────────────────────────────────── */
+  .cart-modal-box { width: 100% !important; max-height: 94dvh; }
+  .cart-modal-actions { flex-wrap: wrap; gap: 4px; }
+
+  /* ── Help modal ──────────────────────────────────────────── */
+  #helpModal { padding: 8px; align-items: flex-end; justify-content: center; }
+  .help-modal-box { width: 100% !important; max-height: 88dvh; transform: translateY(24px); opacity: 0; }
+  #helpModal.open .help-modal-box { transform: translateY(0); opacity: 1; }
+
+  /* ── Cat excl modal ──────────────────────────────────────── */
+  #catExclModal .cem-box {
+    width: 100% !important;
+    max-width: calc(100vw - 16px) !important;
+    height: 90dvh !important;
+  }
+  #catExclModal .cem-body { flex-direction: column; }
+  #catExclModal .cem-left {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 200px;
+  }
+  #catExclModal .cem-chips-wrap { overflow-y: auto; }
+
+  /* ── Toasts ──────────────────────────────────────────────── */
+  #toastRack { right: 8px; left: 8px; max-width: 100%; bottom: 12px; }
+
+  /* ── Matcher stats ───────────────────────────────────────── */
+  .mstat { padding: 8px 4px; }
+  .mstat-val { font-size: 16px; }
+  .mstat-lbl { font-size: 9px; }
+
+  /* ── Obr queue bar ───────────────────────────────────────── */
+  .obr-queue-bar { flex-wrap: wrap; gap: 8px; }
+  .obr-queue-chips { display: none; } /* скрываем чипы на маленьком экране */
+
+  /* ── Table zoom bar ──────────────────────────────────────── */
+  #tableZoomBar { justify-content: flex-start; }
+
+  /* ── Buttons in modal footers ────────────────────────────── */
+  .modal-footer { flex-wrap: wrap; gap: 6px; }
+  .obr-modal-footer { flex-wrap: wrap; gap: 6px; }
+
+  /* ── je-newrow ────────────────────────────────────────────── */
+  .je-newrow { flex-wrap: wrap; }
+
+  /* ── Brand subtab toolbar ────────────────────────────────── */
+  .brand-subtab-toolbar { flex-wrap: wrap; }
+
+  /* ── filter-row ──────────────────────────────────────────── */
+  .filter-row { flex-wrap: wrap; }
+
+  /* ── je-search-row ────────────────────────────────────────── */
+  .je-search-row { flex-wrap: wrap; }
+
+  /* ── pane-prepare xl-group ────────────────────────────────── */
+  #pane-prepare .xl-group { flex-wrap: wrap; }
+
+  /* ── Obr nextstep btns ────────────────────────────────────── */
+  .obr-nextstep-btn { padding: 10px 14px; font-size: var(--fz-base); }
+
+  /* ── Sidebar modal footer ─────────────────────────────────── */
+  #catExclModal .cem-footer { flex-wrap: wrap; gap: 8px; }
+  #catExclModal .cem-footer-note { font-size: 10px; }
+
+  /* ── Error log modal ──────────────────────────────────────── */
+  #errLogModal > div { width: calc(100vw - 16px) !important; max-height: 88dvh !important; }
+
+  /* ── Feedback modal ───────────────────────────────────────── */
+  #feedbackModal .modal-inner { max-height: 92dvh; overflow-y: auto; }
+}
