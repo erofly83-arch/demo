@@ -126,7 +126,7 @@ try { window._graceOverlayDismissed = sessionStorage.getItem('_graceOverlayDismi
 document.addEventListener('DOMContentLoaded', function() {
   var _ki = document.getElementById('licKeyInput');
   if (_ki && !_ki.placeholder) {
-    _ki.placeholder = 'Вставьте блок {"license":{...}} или полный JSON клиента';
+    _ki.placeholder = 'Вставьте ключ и нажмите «Применить»';
   }
 });
 
@@ -263,7 +263,7 @@ window.applyLicenseKeyFromInput = function() {
   var json;
   try { json = JSON.parse(raw); }
   catch(e) {
-    if (typeof showToast === 'function') showToast('Неверный формат JSON', 'err');
+    if (typeof showToast === 'function') showToast('Ключ недействительный', 'err');
     return;
   }
   // Принимаем и {"license":{...}} и сразу объект лицензии
@@ -271,12 +271,12 @@ window.applyLicenseKeyFromInput = function() {
     json = { license: json };
   }
   if (!json.license) {
-    if (typeof showToast === 'function') showToast('Блок "license" не найден', 'err');
+    if (typeof showToast === 'function') showToast('Ключ недействительный', 'err');
     return;
   }
   LicenseManager.validate(json).then(function(lic) {
     if (lic.status === 'invalid' || lic.status === 'none') {
-      if (typeof showToast === 'function') showToast('Ключ недействителен', 'err');
+      if (typeof showToast === 'function') showToast('Ключ недействительный', 'err');
       _renderLicKeyStatus({ status: 'invalid' });
       return;
     }
@@ -335,7 +335,7 @@ function _licKeyBarSetActive(lic) {
     var ta = document.createElement('textarea');
     ta.id = 'licKeyInput';
     ta.rows = 1;
-    ta.placeholder = 'Вставьте блок {"license":{...}} полученный от разработчика';
+    ta.placeholder = 'Вставьте ключ и нажмите «Применить»';
     ta.style.cssText = 'flex:1;padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:var(--fz-sm);font-family:Inter,sans-serif;resize:none;outline:none;line-height:1.5;overflow:hidden;height:32px;transition:border-color 150ms,box-shadow 150ms;background:var(--surface);';
     ta.addEventListener('focus', function() { this.style.borderColor = 'var(--accent)'; this.style.boxShadow = '0 0 0 2px rgba(59,111,212,.12)'; });
     ta.addEventListener('blur',  function() { this.style.borderColor = ''; this.style.boxShadow = ''; });
@@ -2842,6 +2842,38 @@ let _synonymCaptureCol = null;
       line-height: 1.5;
     }
     .syn-capture-hint strong { color: #78350f; }
+    .add-tpl-row {
+      display: flex; align-items: center; gap: 4px; margin-top: 5px;
+    }
+    .add-tpl-input {
+      flex: 1; height: 24px; padding: 0 7px; font-size: 11px;
+      border: 1px solid var(--border-strong); border-radius: 4px;
+      background: var(--surface); color: var(--text-primary);
+      outline: none; font-family: inherit;
+    }
+    .add-tpl-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(59,111,212,.12); }
+    .add-tpl-btn-confirm {
+      height: 24px; padding: 0 8px; font-size: 11px; font-weight: 600;
+      background: var(--accent); color: #fff; border: none; border-radius: 4px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .add-tpl-btn-confirm:hover { opacity: .88; }
+    .add-tpl-btn-cancel {
+      height: 24px; padding: 0 6px; font-size: 13px; line-height: 1;
+      background: transparent; color: var(--text-secondary); border: none;
+      border-radius: 4px; cursor: pointer;
+    }
+    .add-tpl-btn-cancel:hover { background: var(--hover-bg); }
+    .add-tpl-btn {
+      height: 24px; width: 24px; padding: 0; font-size: 15px; line-height: 1;
+      font-weight: 700; background: var(--accent); color: #fff; border: none;
+      border-radius: 4px; cursor: pointer; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .add-tpl-btn:hover { opacity: .88; }
+    .rename-input-row {
+      display: flex; align-items: center; gap: 4px;
+    }
   `;
   document.head.appendChild(s);
 })();
@@ -2909,6 +2941,10 @@ document.addEventListener("click", function(e) {
   if (!e.target.closest("#pane-prepare .rename-wrapper") && !e.target.closest(".modal-box") && activeDropdown) {
     activeDropdown.classList.remove("show");
     activeDropdown = null;
+  }
+  // Скрыть форму добавления наименования при клике вне неё
+  if (!e.target.closest("#pane-prepare .add-tpl-row") && !e.target.closest("#pane-prepare .add-tpl-btn")) {
+    document.querySelectorAll('#pane-prepare .add-tpl-row').forEach(r => r.style.display = 'none');
   }
 });
 
@@ -3443,8 +3479,16 @@ function createRenameInput(colIndex, value) {
     `<div class="dropdown-item" data-value="${String(t).replaceAll('"','&quot;')}">${obrEsc(t)}</div>`
   ).join("");
   return `<div class="rename-wrapper" data-col="${colIndex}">
-    <input class="rename-input" type="text" id="rename-col-${colIndex}" value="${ev}" data-col="${colIndex}" placeholder="Название колонки" autocomplete="off">
+    <div class="rename-input-row">
+      <input class="rename-input" type="text" id="rename-col-${colIndex}" value="${ev}" data-col="${colIndex}" placeholder="Название колонки" autocomplete="off">
+      <button class="add-tpl-btn" data-col="${colIndex}" title="Добавить новое наименование колонки в список" type="button">+</button>
+    </div>
     <div class="dropdown" data-col="${colIndex}">${items}</div>
+    <div class="add-tpl-row" data-add-col="${colIndex}" style="display:none;">
+      <input class="add-tpl-input" type="text" placeholder="Новое наименование…" autocomplete="off">
+      <button class="add-tpl-btn-confirm" type="button">Добавить</button>
+      <button class="add-tpl-btn-cancel" type="button" title="Отмена">×</button>
+    </div>
     <div class="syn-capture-hint" data-cap-col="${colIndex}" style="display:none;">
       👆 <strong>Нажмите на ячейку</strong> в таблице — её текст станет синонимом для&nbsp;«<span class="syn-hint-colname"></span>» и в следующий раз колонка определится автоматически.
     </div>
@@ -3490,6 +3534,88 @@ function attachEvents() {
     });
   });
 
+  // ── Кнопка «+» — добавить новое наименование колонки inline ────────────
+  document.querySelectorAll("#pane-prepare .add-tpl-btn[data-col]").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const ci = parseInt(btn.dataset.col, 10);
+      // закрыть дропдаун если открыт
+      const dd = document.querySelector(`#pane-prepare .dropdown[data-col="${ci}"]`);
+      if (dd) { dd.classList.remove("show"); activeDropdown = null; }
+      // показать строку добавления
+      const addRow = document.querySelector(`#pane-prepare .add-tpl-row[data-add-col="${ci}"]`);
+      if (!addRow) return;
+      const isVisible = addRow.style.display !== 'none';
+      // скрыть все другие формы
+      document.querySelectorAll('#pane-prepare .add-tpl-row').forEach(r => r.style.display = 'none');
+      if (!isVisible) {
+        addRow.style.display = 'flex';
+        const inp = addRow.querySelector('.add-tpl-input');
+        if (inp) { inp.value = ''; inp.focus(); }
+      }
+    });
+  });
+
+  document.querySelectorAll("#pane-prepare .add-tpl-row").forEach(addRow => {
+    const ci = parseInt(addRow.dataset.addCol, 10);
+    const inp = addRow.querySelector('.add-tpl-input');
+    const confirmBtn = addRow.querySelector('.add-tpl-btn-confirm');
+    const cancelBtn = addRow.querySelector('.add-tpl-btn-cancel');
+
+    function _doAddTemplate() {
+      const v = inp ? inp.value.trim() : '';
+      if (!v) { if (inp) inp.focus(); return; }
+      // Проверка дублей (регистронезависимо)
+      const normV = v.toLowerCase();
+      const exists = columnTemplates.some(t => t.toLowerCase() === normV);
+      if (exists) {
+        showToast(`Наименование «${v}» уже есть в списке`, 'warn');
+        if (inp) inp.select();
+        return;
+      }
+      // Проверяем, не совпадает ли с существующим синонимом другой колонки
+      const synConflict = Object.entries(columnSynonyms).find(([k, arr]) =>
+        Array.isArray(arr) && arr.some(s => s.toLowerCase().replace(/\s+/g,' ').trim() === normV.replace(/\s+/g,' ').trim())
+      );
+      if (synConflict) {
+        showToast(`⚠ «${v}» уже используется как синоним для «${synConflict[0]}» — выберите другое название`, 'warn');
+        if (inp) inp.select();
+        return;
+      }
+      columnTemplates.push(v);
+      persistAll();
+      // Обновить дропдаун прямо в текущей шапке без полного re-render
+      const ddEl = document.querySelector(`#pane-prepare .dropdown[data-col="${ci}"]`);
+      if (ddEl) {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item'; item.dataset.value = v; item.textContent = v;
+        item.addEventListener('click', e => {
+          e.stopPropagation();
+          const renameInp = document.querySelector(`#pane-prepare .rename-input[data-col="${ci}"]`);
+          if (!renameInp) return;
+          renameInp.value = v; selectedColumns.set(ci, v);
+          ddEl.classList.remove('show'); activeDropdown = null; updateStats();
+          _enterSynonymCapture(ci);
+        });
+        ddEl.appendChild(item);
+      }
+      // Выбрать новое наименование для текущей колонки сразу
+      const renameInp = document.querySelector(`#pane-prepare .rename-input[data-col="${ci}"]`);
+      if (renameInp) { renameInp.value = v; selectedColumns.set(ci, v); updateStats(); }
+      addRow.style.display = 'none';
+      showToast(`✓ Наименование «${v}» добавлено и выбрано для колонки`, 'ok');
+      _enterSynonymCapture(ci);
+    }
+
+    if (confirmBtn) confirmBtn.addEventListener('click', e => { e.stopPropagation(); _doAddTemplate(); });
+    if (cancelBtn) cancelBtn.addEventListener('click', e => { e.stopPropagation(); addRow.style.display = 'none'; });
+    if (inp) inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); _doAddTemplate(); }
+      if (e.key === 'Escape') { e.stopPropagation(); addRow.style.display = 'none'; }
+    });
+    if (inp) inp.addEventListener('click', e => e.stopPropagation());
+  });
+
   // Synonym capture: click on any data cell to register its text as a synonym
   document.querySelectorAll("#pane-prepare td[data-row][data-col]").forEach(td => {
     td.addEventListener("click", function(e) {
@@ -3507,7 +3633,15 @@ function attachEvents() {
       }
       if (!columnSynonyms[colName]) columnSynonyms[colName] = [];
       const normVal = val.toLowerCase().replace(/\s+/g, ' ').trim();
-      if (!columnSynonyms[colName].includes(normVal)) {
+      // Проверяем межколоночный конфликт — синоним уже закреплён за другим наименованием
+      const conflictCol = Object.entries(columnSynonyms).find(([k, arr]) =>
+        k !== colName && Array.isArray(arr) && arr.map(s => s.toLowerCase().replace(/\s+/g,' ').trim()).includes(normVal)
+      );
+      if (conflictCol) {
+        showToast(`⚠ «${val}» уже является синонимом для «${conflictCol[0]}» — конфликт не создан`, 'warn');
+        _exitSynonymCapture(); return;
+      }
+      if (!columnSynonyms[colName].map(s => s.toLowerCase().replace(/\s+/g,' ').trim()).includes(normVal)) {
         columnSynonyms[colName].push(normVal);
         persistAll();
         showToast(`✓ Синоним «${val}» → «${colName}» сохранён. Колонка будет определяться автоматически.`, 'ok');
