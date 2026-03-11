@@ -1795,6 +1795,15 @@ return { barcode: item.barcode, packQty, autoDivFactor,
 
         _vsData = dataToShow;
 
+        // ── Demo-режим: ограничение 100 строк ───────────────────────────
+        var _demoLimited = false;
+        var _demoTotal   = dataToShow.length;
+        if (window.LICENSE && window.LICENSE.client === 'auto' && dataToShow.length > 100) {
+            dataToShow   = dataToShow.slice(0, 100);
+            _vsData      = dataToShow;
+            _demoLimited = true;
+        }
+
         if (dataToShow.length === 0) {
             tableContainer.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i data-lucide="alert-triangle" style="width:36px;height:36px;color:var(--amber)"></i></div><h3>Нет данных для отображения</h3><p>Проверьте содержимое загруженных файлов или измените фильтры</p></div>`;
             return;
@@ -1869,6 +1878,22 @@ return { barcode: item.barcode, packQty, autoDivFactor,
                 _zt.style.zoom = window._tableZoomLevel;
             }
         });
+
+        // ── Demo: баннер-ограничитель строк ─────────────────────────────
+        var _oldDemoLimitBanner = document.getElementById('_demoRowLimitBanner');
+        if (_oldDemoLimitBanner) _oldDemoLimitBanner.remove();
+        if (_demoLimited) {
+            var _dlb = document.createElement('div');
+            _dlb.id = '_demoRowLimitBanner';
+            _dlb.style.cssText = 'margin-top:6px;padding:8px 16px;background:#EFF6FF;border:1px solid #BFDBFE;border-left:3px solid var(--accent);border-radius:6px;font-size:12px;color:var(--accent-dark);display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+            _dlb.innerHTML = '<span style="font-weight:700">🔓 Demo: показано 100 из ' + _demoTotal.toLocaleString('ru') + ' строк.</span>'
+                + '<span>Для полного доступа приобретите лицензию.</span>'
+                + '<span style="margin-left:auto;display:flex;gap:10px">'
+                + '<a href="tel:+79130998250" style="display:inline-flex;align-items:center;color:#16A34A;font-weight:600;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.88a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+7 913 099-82-50</a>'
+                + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="display:inline-flex;align-items:center;color:var(--accent);font-weight:600;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="12" cy="12" r="12" fill="#3B6FD4"/><path d="M5.5 11.8l12-4.6c.5-.2 1 .1.8.9l-2 9.4c-.1.6-.5.8-1 .5l-2.8-2.1-1.3 1.3c-.2.2-.4.2-.5 0l-.5-2.8-4.4-1.4c-.6-.2-.6-.6.7-1.2z" fill="#fff"/></svg>Telegram</a>'
+                + '</span>';
+            if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(_dlb, wrap.nextSibling);
+        }
     }
 
     function dividePrice(barcode, colKey, valueIndex, factorStr) {
