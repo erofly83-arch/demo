@@ -3058,12 +3058,49 @@ function _updatePriceCardsLock() {
 
 function _handleJsonFileUpload(file, afterLoad) {
   if (!file) return;
-  // Если уже есть пользовательские данные (в т.ч. кастомные настройки колонок) — предупредить
-  if (_hasUserData()) {
-    jeConfirmDialog(
-      'Файл памяти уже загружен. Заменить его файлом «' + file.name + '»?\nВсе текущие данные (кросскоды, бренды, настройки) будут перезаписаны.',
-      'Замена файла памяти'
-    ).then(function(ok) {
+  // Предупреждение о замене только если реально загружены пользовательские данные
+  if (_isJsonLoaded()) {
+    // Текущее имя файла из строки статуса
+    var curName = '';
+    try {
+      var synList = document.getElementById('jsonFileList');
+      if (synList) {
+        var nameSpan = synList.querySelector('.slot-file-row-name');
+        if (nameSpan) curName = nameSpan.textContent.trim();
+      }
+      if (!curName) {
+        var synSt = document.getElementById('synonymsStatus');
+        if (synSt && synSt.textContent && synSt.textContent !== 'Не загружены' && synSt.textContent !== 'Не загружена') {
+          curName = synSt.textContent.replace(/\s*[\(—].*/, '').trim();
+        }
+      }
+    } catch(e) {}
+
+    // Информация о лицензии из текущего файла
+    var licHtml = '';
+    var lic = window.LICENSE;
+    if (lic && lic.raw && lic.raw.key && lic.client !== 'auto') {
+      var statusLabel = { valid: '\u2705 Активна', grace: '\u26a0\ufe0f Льготный период', expired: '\u274c Истекла' }[lic.status] || '';
+      licHtml = '<div style="margin-top:12px;padding:10px 12px;background:var(--accent-bg);border:1px solid #C7D7F5;border-radius:6px;font-size:12px;line-height:1.7;">'
+        + '<div style="font-weight:700;color:var(--accent-dark);margin-bottom:4px;">\uD83D\uDD11 Лицензия текущего файла</div>'
+        + '<div><b>Клиент:</b> ' + lic.client + '</div>'
+        + '<div><b>Тариф:</b> ' + lic.plan + '</div>'
+        + (statusLabel ? '<div><b>Статус:</b> ' + statusLabel + '</div>' : '')
+        + '<div style="margin-top:4px;color:var(--text-muted);font-size:11px;word-break:break-all;"><b>Ключ:</b> ' + lic.raw.key + '</div>'
+        + '</div>';
+    }
+
+    var curFileHtml = curName
+      ? '<div style="margin-bottom:8px;font-size:12px;color:var(--text-secondary);">Текущий файл: <b>' + curName + '</b></div>'
+      : '';
+
+    var msg = curFileHtml
+      + '<div style="font-size:13px;color:var(--text-primary);line-height:1.6;">'
+      + 'Загрузка файла <b>\u00ab' + file.name + '\u00bb</b> заменит все текущие данные: кросскоды, бренды и настройки.'
+      + '</div>'
+      + licHtml;
+
+    jeConfirmDialog(msg, 'Заменить файл памяти?').then(function(ok) {
       if (!ok) return;
       _doLoadJsonFile(file, afterLoad);
     });
