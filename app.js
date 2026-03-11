@@ -134,37 +134,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ── Смена пользователя / сброс лицензии ─────────────────────────────────
 window.switchUserConfirm = function() {
-  // Создаём модальное окно подтверждения
   var existing = document.getElementById('_switchUserModal');
   if (existing) { existing.style.display = 'flex'; return; }
 
   var modal = document.createElement('div');
   modal.id = '_switchUserModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = [
-    '<div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);font-family:Inter,sans-serif">',
-      '<div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px">🔄 Сменить пользователя?</div>',
-      '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px">',
-        'Лицензия и данные памяти текущего пользователя будут удалены.',
-      '</div>',
-      '<div style="font-size:12px;color:var(--amber-dark);background:var(--amber-bg);border:1px solid #FDE68A;border-radius:6px;padding:10px 12px;margin-bottom:20px;display:flex;align-items:center;gap:10px">',
-        '<span style="flex:1;line-height:1.5">💾 Сохраните файл памяти, если хотите вернуться к своей базе позднее.</span>',
-        '<button onclick="(function(){if(typeof downloadCurrentSynonyms===\'function\')downloadCurrentSynonyms();else if(typeof window.downloadCurrentSynonyms===\'function\')window.downloadCurrentSynonyms();})()" style="flex-shrink:0;padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap">⬇ Сохранить</button>',
-      '</div>',
-      '<div style="display:flex;gap:8px;justify-content:flex-end">',
-        '<button onclick="document.getElementById(\'_switchUserModal\').style.display=\'none\'" ',
-          'style="padding:8px 18px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">',
-          'Отмена',
-        '</button>',
-        '<button onclick="window._doSwitchUser()" ',
-          'style="padding:8px 18px;border:none;border-radius:8px;background:var(--red);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">',
-          'Да, сбросить и выйти',
-        '</button>',
-      '</div>',
-    '</div>'
-  ].join('');
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+  modal.style.zIndex = '99999';
+  modal.innerHTML =
+    '<div class="modal-inner" style="width:420px;">' +
+      '<div class="modal-header">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="width:28px;height:28px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🔄</div>' +
+          '<span style="font-weight:700;font-size:var(--fz-lg);">Сменить пользователя?</span>' +
+        '</div>' +
+        '<button class="modal-close-x" onclick="document.getElementById('_switchUserModal').style.display='none'">✕</button>' +
+      '</div>' +
+      '<div class="modal-body" style="gap:10px;">' +
+        '<p style="font-size:var(--fz-base);color:var(--text-secondary);line-height:1.6;margin:0;">Лицензия и данные памяти текущего пользователя будут удалены.</p>' +
+        '<div style="display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid #FDE68A;border-left:3px solid var(--amber);border-radius:var(--radius-md);padding:10px 12px;">' +
+          '<span style="flex:1;font-size:var(--fz-sm);color:var(--amber-dark);line-height:1.5;">💾 Сохраните файл памяти, если хотите вернуться к своей базе позднее.</span>' +
+          '<button class="btn btn-success" style="flex-shrink:0;" onclick="(function(){if(typeof downloadCurrentSynonyms==='function')downloadCurrentSynonyms();else if(typeof window.downloadCurrentSynonyms==='function')window.downloadCurrentSynonyms();})()">' +
+            '<i data-lucide="save"></i> Сохранить' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn" onclick="document.getElementById('_switchUserModal').style.display='none'">Отмена</button>' +
+        '<button class="btn btn-danger" onclick="window._doSwitchUser()">' +
+          '<i data-lucide="log-out"></i> Да, сбросить и выйти' +
+        '</button>' +
+      '</div>' +
+    '</div>';
   modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
   document.body.appendChild(modal);
+  if (typeof reIcons === 'function') reIcons(modal);
 };
 
 window._doSwitchUser = function() {
