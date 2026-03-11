@@ -74,16 +74,6 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
 .field .hint{font-size:var(--fz-xs);color:var(--text-muted)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-/* ── PLAN CARDS ── */
-.plan-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.plan-card{border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:10px 12px;cursor:pointer;transition:all 100ms;position:relative;user-select:none}
-.plan-card input[type=radio]{position:absolute;opacity:0;pointer-events:none}
-.plan-card:hover{background:var(--accent-lite);border-color:var(--accent)}
-.plan-card.selected{background:var(--accent-bg);border-color:var(--accent);border-width:2px}
-.plan-card-name{font-size:var(--fz-base);font-weight:700;margin-bottom:2px}
-.plan-card.selected .plan-card-name{color:var(--accent-dark)}
-.plan-card-desc{font-size:var(--fz-xs);color:var(--text-secondary);line-height:1.4}
-
 /* ── UPLOAD ZONE ── */
 .upload-zone{border:1px dashed var(--border-strong);border-radius:var(--radius-md);padding:14px;text-align:center;cursor:pointer;position:relative;transition:all 100ms;background:var(--surface-alt)}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--accent-lite)}
@@ -99,8 +89,8 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
 
 /* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:var(--fz-xs);font-weight:700}
-.badge-trial{background:var(--amber-bg);color:var(--amber-dark);border:1px solid #FDE68A}
 .badge-full{background:var(--green-bg);color:var(--green-dark);border:1px solid #A7F3D0}
+.badge-test{background:var(--red-bg);color:var(--red);border:1px solid #FCA5A5}
 .badge-none{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border)}
 
 /* ── TG STATUS ── */
@@ -199,28 +189,31 @@ input,select,textarea,button{font-family:'Inter',sans-serif}
           <input type="text" id="fClient" placeholder="ООО Ромашка" autocomplete="off">
         </div>
 
-        <div style="margin-bottom:12px">
-          <div style="font-size:var(--fz-xs);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Тариф</div>
-          <div class="plan-cards">
-            <label class="plan-card selected" id="cardTrial" onclick="selectPlan('trial')">
-              <input type="radio" name="plan" value="trial" checked>
-              <div class="plan-card-name">Trial</div>
-              <div class="plan-card-desc">Экспорт Excel/ZIP заблокирован. Ограничен по сроку.</div>
-            </label>
-            <label class="plan-card" id="cardFull" onclick="selectPlan('full')">
-              <input type="radio" name="plan" value="full">
-              <div class="plan-card-name">Full</div>
-              <div class="plan-card-desc">Полный доступ. Всё разблокировано.</div>
-            </label>
+        <div style="margin-bottom:4px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--green-bg);border:1px solid #A7F3D0;border-radius:var(--radius-md)">
+            <span style="font-size:14px">✅</span>
+            <div>
+              <div style="font-size:var(--fz-sm);font-weight:700;color:var(--green-dark)">Full — полный доступ</div>
+              <div style="font-size:var(--fz-xs);color:var(--text-secondary)">Все функции разблокированы. Экспорт Excel/ZIP доступен.</div>
+            </div>
           </div>
+          <input type="hidden" name="plan" id="planInput" value="full">
         </div>
 
-        <div id="trialPresets" class="btn-row" style="margin-bottom:10px">
-          <span style="font-size:var(--fz-xs);color:var(--text-secondary);align-self:center;white-space:nowrap">Срок trial:</span>
-          <button class="btn btn-sm" onclick="setTrialDays(3)">3 дня</button>
-          <button class="btn btn-sm" onclick="setTrialDays(7)">7 дней</button>
-          <button class="btn btn-sm" onclick="setTrialDays(14)">14 дней</button>
-          <button class="btn btn-sm" onclick="setTrialDays(30)">30 дней</button>
+        <div style="margin-bottom:10px;margin-top:12px">
+          <div style="font-size:var(--fz-xs);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;color:var(--text-secondary)">Быстрый выбор срока</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <div style="font-size:var(--fz-xs);color:var(--text-muted);align-self:center;white-space:nowrap;padding:2px 4px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:var(--radius);font-weight:600">🧪 Тест:</div>
+            <button class="btn btn-sm" onclick="setDays(3)" title="Тестовый доступ на 3 дня">3 дня</button>
+            <button class="btn btn-sm" onclick="setDays(7)" title="Тестовый доступ на 7 дней">7 дней</button>
+            <button class="btn btn-sm" onclick="setDays(14)" title="Тестовый доступ на 14 дней">14 дней</button>
+            <div style="width:1px;background:var(--border);align-self:stretch;margin:0 2px"></div>
+            <div style="font-size:var(--fz-xs);color:var(--text-muted);align-self:center;white-space:nowrap;padding:2px 4px;background:var(--green-bg);border:1px solid #A7F3D0;border-radius:var(--radius);font-weight:600">📋 Лицензия:</div>
+            <button class="btn btn-sm" onclick="setMonths(6)">6 мес</button>
+            <button class="btn btn-sm" onclick="setMonths(12)">1 год</button>
+            <button class="btn btn-sm" onclick="setMonths(24)">2 года</button>
+            <button class="btn btn-sm" onclick="setForever()" title="Бессрочная лицензия (2099)">∞ Бессрочно</button>
+          </div>
         </div>
 
         <div class="form-row">
@@ -420,27 +413,23 @@ function initApp() {
 
 function fmtDate(d) { return d.toISOString().split('T')[0]; }
 
-function selectPlan(plan) {
-  document.getElementById('cardTrial').classList.toggle('selected', plan === 'trial');
-  document.getElementById('cardFull').classList.toggle('selected', plan === 'full');
-  document.querySelector(`input[value="${plan}"]`).checked = true;
-  const presets = document.getElementById('trialPresets');
-  if (plan === 'full') {
-    document.getElementById('fExpires').value = '2099-12-31';
-    if (presets) presets.style.display = 'none';
-  } else {
-    const ny = new Date(); ny.setFullYear(ny.getFullYear() + 1);
-    document.getElementById('fExpires').value = fmtDate(ny);
-    if (presets) presets.style.display = 'flex';
-  }
-}
-
-function setTrialDays(days) {
-  const issued = document.getElementById('fIssued').value || fmtDate(new Date());
-  document.getElementById('fIssued').value = issued;
-  const base = new Date(issued);
+// Пресеты срока — тестовые (дни от сегодня)
+function setDays(days) {
+  const base = new Date(document.getElementById('fIssued').value || fmtDate(new Date()));
   base.setDate(base.getDate() + days);
   document.getElementById('fExpires').value = fmtDate(base);
+}
+
+// Пресеты срока — лицензия (месяцы от сегодня)
+function setMonths(months) {
+  const base = new Date(document.getElementById('fIssued').value || fmtDate(new Date()));
+  base.setMonth(base.getMonth() + months);
+  document.getElementById('fExpires').value = fmtDate(base);
+}
+
+// Бессрочно
+function setForever() {
+  document.getElementById('fExpires').value = '2099-12-31';
 }
 
 // ═══════════════════════════════════════════════════
@@ -472,7 +461,6 @@ function _loadClientFile(file) {
       if (parsed.license && parsed.license.client && !document.getElementById('fClient').value) {
         document.getElementById('fClient').value = parsed.license.client;
       }
-      if (parsed.license && parsed.license.plan) selectPlan(parsed.license.plan);
       // Автозаполнение контакта из JSON клиента
       if (parsed.userContact && !document.getElementById('fContact').value) {
         document.getElementById('fContact').value = parsed.userContact;
@@ -495,7 +483,7 @@ async function generateHmac(client, plan, expires) {
 
 async function generate() {
   const client  = document.getElementById('fClient').value.trim();
-  const plan    = document.querySelector('input[name=plan]:checked').value;
+  const plan    = 'full';
   const issued  = document.getElementById('fIssued').value;
   const expires = document.getElementById('fExpires').value;
   const comment = document.getElementById('fComment').value.trim();
@@ -504,6 +492,10 @@ async function generate() {
   if (!client)  { toast('Укажите название клиента', 'warn'); return; }
   if (!issued || !expires) { toast('Укажите даты', 'warn'); return; }
   if (expires < issued)   { toast('Дата окончания раньше даты выдачи', 'warn'); return; }
+
+  // Определяем: тестовый ключ (≤14 дней) или полноценная лицензия
+  const daysTotal = Math.round((new Date(expires) - new Date(issued)) / 86400000);
+  const isTest = daysTotal <= 14;
 
   const key      = await generateHmac(client, plan, expires);
   const licBlock = contact
@@ -515,19 +507,24 @@ async function generate() {
   base.license = licBlock;
   if (contact) base.userContact = contact;
 
-  _lastGenerated = { json: base, client, plan, issued, expires, comment, contact, key, ts: new Date().toISOString() };
+  _lastGenerated = { json: base, client, plan, issued, expires, comment, contact, key, ts: new Date().toISOString(), isTest };
 
   // Render
   const badge = document.getElementById('resultBadge');
-  badge.className = 'badge ' + (plan === 'full' ? 'badge-full' : 'badge-trial');
-  badge.textContent = plan.toUpperCase();
+  if (isTest) {
+    badge.className = 'badge badge-test';
+    badge.textContent = `🧪 ТЕСТ · ${daysTotal} дн.`;
+  } else {
+    badge.className = 'badge badge-full';
+    badge.textContent = expires === '2099-12-31' ? '✅ FULL · ∞' : `✅ FULL · ${daysTotal} дн.`;
+  }
   document.getElementById('resultCode').textContent = JSON.stringify({ license: licBlock }, null, 2);
   document.getElementById('btnCopy').disabled = false;
   document.getElementById('downloadBtns').style.display = 'flex';
 
   _saveToHistory(_lastGenerated);
   renderHistory();
-  toast('Лицензия сгенерирована', 'ok');
+  toast(isTest ? `Тестовый ключ на ${daysTotal} дн. сгенерирован` : 'Лицензия сгенерирована', 'ok');
 }
 
 function copyResult() {
@@ -563,7 +560,6 @@ function resetForm() {
   document.getElementById('fComment').value = '';
   _clientJson = null;
   document.getElementById('uploadedFileName').textContent = '';
-  selectPlan('trial');
   const today = new Date(), ny = new Date();
   ny.setFullYear(today.getFullYear() + 1);
   document.getElementById('fIssued').value  = fmtDate(today);
@@ -580,12 +576,15 @@ function resetForm() {
 // TELEGRAM — всё через GAS-прокси
 // ═══════════════════════════════════════════════════
 function _buildFullText(rec) {
+  const daysTotal = Math.round((new Date(rec.expires) - new Date(rec.issued || rec.expires)) / 86400000);
+  const isTest    = rec.isTest || (daysTotal <= 14 && daysTotal > 0);
+  const typeLabel = isTest ? `🧪 Тестовый (${daysTotal} дн.)` : (rec.expires === '2099-12-31' ? '✅ Full · Бессрочно' : `✅ Full · ${daysTotal} дн.`);
   return [
     '🔑 Лицензия — Прайс-менеджер',
     '',
     `👤 Клиент: ${rec.client}`,
     rec.contact ? `📞 Контакт: ${rec.contact}` : null,
-    `📋 Тариф: ${rec.plan.toUpperCase()}`,
+    `📋 Тип: ${typeLabel}`,
     `📅 Выдана: ${rec.issued}`,
     `⏳ До: ${rec.expires}`,
     rec.comment ? `💬 ${rec.comment}` : null,
@@ -692,14 +691,17 @@ function renderHistory() {
   }
   const today = fmtDate(new Date());
   tbody.innerHTML = history.map((rec, i) => {
-    const expired = rec.expires < today;
-    const bcls    = rec.plan === 'full' ? 'badge-full' : 'badge-trial';
+    const expired  = rec.expires < today;
+    const daysTotal = Math.round((new Date(rec.expires) - new Date(rec.issued || rec.expires)) / 86400000);
+    const isTest   = rec.isTest || (daysTotal <= 14 && daysTotal > 0);
+    const bcls     = isTest ? 'badge-test' : 'badge-full';
+    const blabel   = isTest ? `🧪 ${daysTotal}д` : (rec.expires === '2099-12-31' ? '✅ ∞' : '✅ Full');
     return `<tr>
       <td style="font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fz-md)"
           title="${escHtml(rec.client)}">${escHtml(rec.client)}</td>
       <td style="font-size:var(--fz-xs);color:var(--text-secondary);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
           title="${escHtml(rec.contact||'')}">${escHtml(rec.contact||'—')}</td>
-      <td><span class="badge ${bcls}">${rec.plan.toUpperCase()}</span></td>
+      <td><span class="badge ${bcls}">${blabel}</span></td>
       <td style="font-size:var(--fz-xs);font-family:'Courier New',monospace;white-space:nowrap">
         ${rec.expires}${expired ? '<br><span style="color:var(--red);font-weight:700">истекла</span>' : ''}
       </td>
@@ -720,19 +722,25 @@ function loadFromHistory(i) {
   document.getElementById('fComment').value = rec.comment || '';
   document.getElementById('fIssued').value  = rec.issued;
   document.getElementById('fExpires').value = rec.expires;
-  selectPlan(rec.plan);
 
   // Загружаем ключ в панель результата
   if (rec.key) {
-    const licBlock = { client: rec.client, plan: rec.plan, issued: rec.issued, expires: rec.expires, key: rec.key };
+    const licBlock = { client: rec.client, plan: 'full', issued: rec.issued, expires: rec.expires, key: rec.key };
     if (rec.contact) licBlock.contact = rec.contact;
+    const daysTotal = Math.round((new Date(rec.expires) - new Date(rec.issued || rec.expires)) / 86400000);
+    const isTest    = rec.isTest || (daysTotal <= 14 && daysTotal > 0);
     const badge = document.getElementById('resultBadge');
-    badge.className = 'badge ' + (rec.plan === 'full' ? 'badge-full' : 'badge-trial');
-    badge.textContent = rec.plan.toUpperCase();
+    if (isTest) {
+      badge.className = 'badge badge-test';
+      badge.textContent = `🧪 ТЕСТ · ${daysTotal} дн.`;
+    } else {
+      badge.className = 'badge badge-full';
+      badge.textContent = rec.expires === '2099-12-31' ? '✅ FULL · ∞' : `✅ FULL · ${daysTotal} дн.`;
+    }
     document.getElementById('resultCode').textContent = JSON.stringify({ license: licBlock }, null, 2);
     document.getElementById('btnCopy').disabled = false;
     document.getElementById('downloadBtns').style.display = 'flex';
-    _lastGenerated = { json: { license: licBlock }, client: rec.client, plan: rec.plan, issued: rec.issued, expires: rec.expires, comment: rec.comment || '', contact: rec.contact || '', key: rec.key, ts: rec.ts };
+    _lastGenerated = { json: { license: licBlock }, client: rec.client, plan: 'full', issued: rec.issued, expires: rec.expires, comment: rec.comment || '', contact: rec.contact || '', key: rec.key, ts: rec.ts, isTest };
   }
 
   toast('Загружено: ' + rec.client, 'ok');
