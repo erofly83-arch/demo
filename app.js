@@ -149,15 +149,15 @@ window.switchUserConfirm = function() {
   var hdrL = document.createElement('div');
   hdrL.style.cssText = 'display:flex;align-items:center;gap:8px;';
   var ico = document.createElement('div');
-  ico.style.cssText = 'width:28px;height:28px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;';
-  ico.textContent = '🔄';
+  ico.style.cssText = 'width:28px;height:28px;background:var(--red-bg);border:1px solid #FCA5A5;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+  ico.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
   var ttl = document.createElement('span');
   ttl.style.cssText = 'font-weight:700;font-size:var(--fz-lg);';
-  ttl.textContent = 'Сменить пользователя?';
+  ttl.textContent = 'Сменить пользователя';
   hdrL.appendChild(ico); hdrL.appendChild(ttl);
   var xBtn = document.createElement('button');
   xBtn.className = 'modal-close-x';
-  xBtn.textContent = '✕';
+  xBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   xBtn.onclick = function() { modal.style.display = 'none'; };
   hdr.appendChild(hdrL); hdr.appendChild(xBtn);
 
@@ -165,35 +165,46 @@ window.switchUserConfirm = function() {
   var body = document.createElement('div');
   body.className = 'modal-body';
   body.style.gap = '10px';
+
   var desc = document.createElement('p');
   desc.style.cssText = 'font-size:var(--fz-base);color:var(--text-secondary);line-height:1.6;margin:0;';
   desc.textContent = 'Лицензия и данные памяти текущего пользователя будут удалены.';
+
   var warn = document.createElement('div');
   warn.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid #FDE68A;border-left:3px solid var(--amber);border-radius:var(--radius-md);padding:10px 12px;';
+
+  var warnIco = document.createElement('span');
+  warnIco.style.cssText = 'flex-shrink:0;color:var(--amber);';
+  warnIco.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
+
   var warnTxt = document.createElement('span');
   warnTxt.style.cssText = 'flex:1;font-size:var(--fz-sm);color:var(--amber-dark);line-height:1.5;';
-  warnTxt.textContent = '💾 Сохраните файл памяти, если хотите вернуться к своей базе позднее.';
+  warnTxt.textContent = 'Сохраните файл памяти, если хотите вернуться к своей базе позднее.';
+
   var saveBtn = document.createElement('button');
   saveBtn.className = 'btn btn-success';
   saveBtn.style.flexShrink = '0';
-  saveBtn.textContent = '⬇ Сохранить';
+  saveBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Сохранить';
   saveBtn.onclick = function() {
     if (typeof downloadCurrentSynonyms === 'function') downloadCurrentSynonyms();
     else if (typeof window.downloadCurrentSynonyms === 'function') window.downloadCurrentSynonyms();
   };
-  warn.appendChild(warnTxt); warn.appendChild(saveBtn);
+
+  warn.appendChild(warnIco); warn.appendChild(warnTxt); warn.appendChild(saveBtn);
   body.appendChild(desc); body.appendChild(warn);
 
   // ─ Footer ─
   var ftr = document.createElement('div');
   ftr.className = 'modal-footer';
+
   var cancelBtn = document.createElement('button');
   cancelBtn.className = 'btn';
   cancelBtn.textContent = 'Отмена';
   cancelBtn.onclick = function() { modal.style.display = 'none'; };
+
   var confirmBtn = document.createElement('button');
   confirmBtn.className = 'btn btn-danger';
-  confirmBtn.textContent = 'Да, сбросить и выйти';
+  confirmBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Выйти и сбросить';
   confirmBtn.onclick = function() { window._doSwitchUser(); };
   ftr.appendChild(cancelBtn); ftr.appendChild(confirmBtn);
 
