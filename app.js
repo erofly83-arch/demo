@@ -87,11 +87,13 @@ try { window._graceOverlayDismissed = sessionStorage.getItem('_graceOverlayDismi
   try {
     var saved = localStorage.getItem('pm_license_block');
     if (!saved) {
-      // Нет сохранённой лицензии — автоматически включаем trial-режим:
-      // карточки «Мой прайс» и «Прайсы» разблокированы, без баннера
+      // Нет сохранённой лицензии — автоматически включаем demo-режим:
+      // карточки «Мой прайс» и «Прайсы» разблокированы, баннер demo
       window.LICENSE = Object.freeze({ status: 'valid', plan: 'trial', client: 'auto', daysLeft: 0 });
       requestAnimationFrame(function() {
         if (typeof _updatePriceCardsLock === 'function') _updatePriceCardsLock();
+        if (typeof _showDemoBanner === 'function') _showDemoBanner();
+        if (typeof _renderLicenseSidebar === 'function') _renderLicenseSidebar(window.LICENSE);
       });
       return;
     }
@@ -182,6 +184,7 @@ window._doSwitchUser = function() {
   // 6. Убираем UI лицензии
   var licBlock = document.getElementById('licSidebarBlock'); if (licBlock) licBlock.remove();
   var licBanner = document.getElementById('licTrialBanner'); if (licBanner) licBanner.remove();
+  var licDemoBanner = document.getElementById('licDemoBanner'); if (licDemoBanner) licDemoBanner.remove();
   var licOverlay = document.getElementById('licOverlay'); if (licOverlay) licOverlay.remove();
   var licStatus = document.getElementById('licKeyStatus'); if (licStatus) licStatus.style.display = 'none';
   var contactBlock = document.getElementById('userContactFilled'); if (contactBlock) contactBlock.style.display = 'none';
@@ -259,7 +262,7 @@ function _renderLicKeyStatus(lic) {
   if (!el) return;
   el.style.display = 'block';
   var map = {
-    valid:   { bg:'var(--green-bg)',   border:'#A7F3D0', color:'var(--green-dark)',  text: lic.plan === 'full' ? '✅ Full' : ('✅ Trial · ' + (lic.daysLeft||0) + ' дн.') },
+    valid:   { bg:'var(--green-bg)',   border:'#A7F3D0', color:'var(--green-dark)',  text: lic.plan === 'full' ? '✅ Full' : (lic.client === 'auto' ? '🔓 Demo' : ('✅ Trial · ' + (lic.daysLeft||0) + ' дн.')) },
     grace:   { bg:'#FFF7ED',          border:'#FED7AA', color:'#C2410C',            text: '⚠️ Grace ' + (lic.daysPast||0) + '/3 дн.' },
     expired: { bg:'var(--red-bg)',     border:'#FCA5A5', color:'var(--red)',         text: '🔒 Истекла' },
     invalid: { bg:'var(--red-bg)',     border:'#FCA5A5', color:'var(--red)',         text: '❌ Неверный ключ' },
@@ -1722,8 +1725,8 @@ return { barcode: item.barcode, packQty, autoDivFactor,
             var _tlb = document.createElement('div');
             _tlb.id = '_trialRowLimitBanner';
             _tlb.style.cssText = 'margin-top:6px;padding:8px 16px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:6px;font-size:12px;color:var(--amber-dark);display:flex;align-items:center;gap:10px;flex-wrap:wrap';
-            _tlb.innerHTML = '<span style="font-weight:700">⚠️ Trial: показано ' + TRIAL_ROW_LIMIT + ' из ' + _trialTotal.toLocaleString('ru') + ' строк.</span>'
-                + '<span>Для полного доступа перейдите на <strong>Full</strong>-лицензию.</span>'
+            _tlb.innerHTML = '<span style="font-weight:700">⚠️ Demo: показано ' + TRIAL_ROW_LIMIT + ' из ' + _trialTotal.toLocaleString('ru') + ' строк.</span>'
+                + '<span>Для полного доступа приобретите лицензию.</span>'
                 + '<span style="margin-left:auto;display:flex;gap:10px">'
                 + '<a href="tel:+79130998250" style="display:inline-flex;align-items:center;color:#16A34A;font-weight:600;text-decoration:none"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#16A34A\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"display:inline;vertical-align:middle;margin-right:4px\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.88a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z\"/></svg>+7 913 099-82-50</a>'
                 + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="display:inline-flex;align-items:center;color:var(--accent);font-weight:600;text-decoration:none"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\" style=\"display:inline;vertical-align:middle;margin-right:4px\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"#3B6FD4\"/><path d=\"M5.5 11.8l12-4.6c.5-.2 1 .1.8.9l-2 9.4c-.1.6-.5.8-1 .5l-2.8-2.1-1.3 1.3c-.2.2-.4.2-.5 0l-.5-2.8-4.4-1.4c-.6-.2-.6-.6.7-1.2z\" fill=\"#fff\"/></svg>Telegram</a>'
@@ -1851,7 +1854,7 @@ return { barcode: item.barcode, packQty, autoDivFactor,
     async function generateExcel(mode) {
     // Жёсткая проверка лицензии внутри функции — независимо от состояния UI
     if (!LicenseManager.isAllowed('export')) {
-      if (typeof showToast === 'function') showToast('Экспорт недоступен в Trial-версии — перейдите на Full', 'warn');
+      if (typeof showToast === 'function') showToast('Экспорт недоступен в Demo-режиме — приобретите лицензию', 'warn');
       return;
     }
     try {
@@ -5457,7 +5460,7 @@ document.getElementById('jeClearBtn').addEventListener('click', function() {
 document.getElementById('jeExportXlsxBtn').addEventListener('click', async function() {
   // Жёсткая проверка лицензии внутри обработчика
   if (!LicenseManager.isAllowed('export')) {
-    if (typeof showToast === 'function') showToast('Экспорт недоступен в Trial-версии — перейдите на Full', 'warn');
+    if (typeof showToast === 'function') showToast('Экспорт недоступен в Demo-режиме — приобретите лицензию', 'warn');
     return;
   }
   const rows = [['Штрихкод','Наименование','Кросскоды ШК']];
@@ -8998,7 +9001,14 @@ function _applyLicenseUI(lic) {
   } else if (lic.status === 'valid' && lic.plan === 'trial' && lic.client !== 'auto') {
     _showTrialBanner(lic);
   }
-  // valid + full или auto-trial — ничего не показываем, элементы уже убраны выше
+  // Для demo-режима (auto) — всегда показываем постоянный баннер вверху
+  if (lic.status === 'valid' && lic.plan === 'trial' && lic.client === 'auto') {
+    _showDemoBanner();
+  } else {
+    var _oldDemoBanner = document.getElementById('licDemoBanner');
+    if (_oldDemoBanner) _oldDemoBanner.remove();
+  }
+  // valid + full или именной trial — ничего дополнительно
 }
 
 // ── Перехватчик кликов по заблокированным кнопкам экспорта (один раз) ─────
@@ -9013,7 +9023,7 @@ function _applyLicenseUI(lic) {
       e.preventDefault();
       e.stopImmediatePropagation();
       if (typeof showToast === 'function') {
-        showToast('Экспорт недоступен в Trial-версии — перейдите на Full', 'warn');
+        showToast('Экспорт недоступен в Demo-режиме — приобретите лицензию', 'warn');
       }
     }, true); // capture = true — перехватываем до штатного обработчика
   };
@@ -9038,7 +9048,7 @@ function _applyLicenseRestrictions(lic) {
     if (!btn) return;
     if (!canExport) {
       btn.setAttribute('data-lic-locked', '1');
-      btn.title = 'Недоступно в Trial — перейдите на Full';
+      btn.title = 'Недоступно в Demo-режиме — приобретите лицензию';
       // Визуальное приглушение: серый цвет текста + курсор
       btn.style.opacity   = '0.45';
       btn.style.cursor    = 'not-allowed';
@@ -9085,10 +9095,10 @@ function _renderLicenseSidebar(lic) {
       + '</div></div>';
   } else if (lic.status === 'valid' && lic.plan === 'trial') {
     if (lic.client === 'auto') {
-      // Автоматический trial без ключа — показываем нейтральный бейдж
+      // Автоматический demo без ключа — показываем нейтральный бейдж
       block.innerHTML = '<div style="padding:7px 10px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--radius-md)">'
-        + '<div style="font-size:11px;font-weight:700;color:var(--amber-dark);line-height:1.3">Trial-режим</div>'
-        + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px;opacity:.8">Введите ключ для полного доступа</div>'
+        + '<div style="font-size:11px;font-weight:700;color:var(--amber-dark);line-height:1.3">Demo-режим</div>'
+        + '<div style="font-size:10px;color:var(--amber-dark);margin-top:2px;opacity:.8">Введите ключ или приобретите лицензию</div>'
         + '</div></div>';
     } else {
       var days = lic.daysLeft;
@@ -9111,6 +9121,29 @@ function _renderLicenseSidebar(lic) {
   }
 
   footer.prepend(block);
+}
+
+// ── Постоянный баннер для demo-режима ────────────────────────────────────
+function _showDemoBanner() {
+  var existing = document.getElementById('licDemoBanner');
+  if (existing) return; // уже показан
+  var main = document.querySelector('.app-main');
+  if (!main) return;
+  var banner = document.createElement('div');
+  banner.id = 'licDemoBanner';
+  banner.style.cssText = 'background:linear-gradient(90deg,#1e3a5f 0%,#1d4ed8 100%);border-bottom:2px solid #93c5fd;padding:9px 20px;display:flex;align-items:center;gap:12px;font-size:12px;color:#fff;flex-wrap:wrap;flex-shrink:0;';
+  banner.innerHTML = '<span style="font-size:15px;flex-shrink:0;">🔓</span>'
+    + '<span style="font-weight:700;white-space:nowrap;">Demo-режим</span>'
+    + '<span style="opacity:.9;">Вы используете демо-версию. Чтобы получить полный доступ — свяжитесь с нами и приобретите лицензию.</span>'
+    + '<span style="margin-left:auto;display:flex;gap:10px;flex-shrink:0;">'
+    + '<a href="tel:+79130998250" style="display:inline-flex;align-items:center;gap:4px;color:#bfdbfe;font-weight:600;text-decoration:none;white-space:nowrap;">'
+    + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.88a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+    + '+7 913 099-82-50</a>'
+    + '<a href="https://t.me/vorontsov_dmitriy" target="_blank" style="display:inline-flex;align-items:center;gap:4px;color:#bfdbfe;font-weight:600;text-decoration:none;white-space:nowrap;">'
+    + '<svg width="13" height="13" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#3B6FD4"/><path d="M5.5 11.8l12-4.6c.5-.2 1 .1.8.9l-2 9.4c-.1.6-.5.8-1 .5l-2.8-2.1-1.3 1.3c-.2.2-.4.2-.5 0l-.5-2.8-4.4-1.4c-.6-.2-.6-.6.7-1.2z" fill="#fff"/></svg>'
+    + 'Telegram</a>'
+    + '</span>';
+  main.prepend(banner);
 }
 
 // ── Баннер для trial ──────────────────────────────────────────────────────
