@@ -34,16 +34,9 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   const CURRENT = [SHELL_CACHE, CDN_CACHE, FONT_CACHE];
   event.waitUntil(
-    caches.keys()
-      .then(keys => {
-        const toDelete = keys.filter(k => !CURRENT.includes(k));
-        return Promise.all(toDelete.map(k => caches.delete(k))).then(() => toDelete.length > 0);
-      })
-      .then(wasUpdate => {
-        if (!wasUpdate) return;
-        return self.clients.matchAll({ type: 'window' })
-          .then(clients => clients.forEach(c => c.postMessage({ type: 'SW_UPDATED' })));
-      })
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => !CURRENT.includes(k)).map(k => caches.delete(k)))
+    )
   );
   self.clients.claim();
 });
