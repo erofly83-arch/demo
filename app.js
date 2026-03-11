@@ -2818,6 +2818,54 @@ let startRowIndex = 0;
 let currentWorkbook = null;
 let displayedRows = 50;
 let activeDropdown = null;
+let _synonymCaptureCol = null;
+
+// ── Synonym-capture helpers ──────────────────────────────────────────────
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `
+    table.syn-capture-active td[data-row] { cursor: crosshair !important; }
+    table.syn-capture-active td[data-row]:hover {
+      background: #fef3c7 !important;
+      outline: 2px solid #f59e0b;
+      outline-offset: -2px;
+    }
+    .syn-capture-hint {
+      margin-top: 5px;
+      padding: 5px 8px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 3px solid #f59e0b;
+      border-radius: 5px;
+      font-size: 10px;
+      color: #92400e;
+      line-height: 1.5;
+    }
+    .syn-capture-hint strong { color: #78350f; }
+  `;
+  document.head.appendChild(s);
+})();
+
+function _enterSynonymCapture(colIndex) {
+  _synonymCaptureCol = colIndex;
+  document.querySelectorAll('#pane-prepare .syn-capture-hint').forEach(h => h.style.display = 'none');
+  const hint = document.querySelector(`#pane-prepare .syn-capture-hint[data-cap-col="${colIndex}"]`);
+  if (hint) {
+    const colName = selectedColumns.get(colIndex) || '';
+    const nameSpan = hint.querySelector('.syn-hint-colname');
+    if (nameSpan) nameSpan.textContent = colName;
+    hint.style.display = '';
+  }
+  const tbl = dataTable ? dataTable.closest('table') : null;
+  if (tbl) tbl.classList.add('syn-capture-active');
+}
+
+function _exitSynonymCapture() {
+  _synonymCaptureCol = null;
+  document.querySelectorAll('#pane-prepare .syn-capture-hint').forEach(h => h.style.display = 'none');
+  const tbl = dataTable ? dataTable.closest('table') : null;
+  if (tbl) tbl.classList.remove('syn-capture-active');
+}
 let originalFileName = "export";
 let fileQueue = [];
 let _queueTotal = 0;
@@ -3342,6 +3390,7 @@ function applyColWidths() {
 }
 
 function obrRenderTable() {
+  _synonymCaptureCol = null; // сбрасываем режим захвата синонима при перерисовке
 
   const _tw = document.getElementById('obrTableWrap');
   if (_tw) _tw.style.display = '';
@@ -3396,6 +3445,9 @@ function createRenameInput(colIndex, value) {
   return `<div class="rename-wrapper" data-col="${colIndex}">
     <input class="rename-input" type="text" id="rename-col-${colIndex}" value="${ev}" data-col="${colIndex}" placeholder="Название колонки" autocomplete="off">
     <div class="dropdown" data-col="${colIndex}">${items}</div>
+    <div class="syn-capture-hint" data-cap-col="${colIndex}" style="display:none;">
+      👆 <strong>Нажмите на ячейку</strong> в таблице — её текст станет синонимом для&nbsp;«<span class="syn-hint-colname"></span>» и в следующий раз колонка определится автоматически.
+    </div>
   </div>`;
 }
 
@@ -3433,6 +3485,36 @@ function attachEvents() {
       inp.value = e.target.dataset.value || "";
       selectedColumns.set(ci, inp.value);
       dd.classList.remove("show"); activeDropdown = null; updateStats();
+      // Enter synonym-capture mode for this column
+      if (inp.value) _enterSynonymCapture(ci);
+    });
+  });
+
+  // Synonym capture: click on any data cell to register its text as a synonym
+  document.querySelectorAll("#pane-prepare td[data-row][data-col]").forEach(td => {
+    td.addEventListener("click", function(e) {
+      if (_synonymCaptureCol === null) return;
+      e.stopPropagation();
+      const rowIdx = parseInt(td.dataset.row, 10);
+      const colIdx = parseInt(td.dataset.col, 10);
+      const val = (tableData[rowIdx] != null && tableData[rowIdx][colIdx] != null)
+        ? String(tableData[rowIdx][colIdx]).trim() : '';
+      const colName = selectedColumns.get(_synonymCaptureCol) || '';
+      if (!colName) { _exitSynonymCapture(); return; }
+      if (!val) {
+        showToast('Ячейка пустая — синоним не добавлен', 'warn');
+        _exitSynonymCapture(); return;
+      }
+      if (!columnSynonyms[colName]) columnSynonyms[colName] = [];
+      const normVal = val.toLowerCase().replace(/\s+/g, ' ').trim();
+      if (!columnSynonyms[colName].includes(normVal)) {
+        columnSynonyms[colName].push(normVal);
+        persistAll();
+        showToast(`✓ Синоним «${val}» → «${colName}» сохранён. Колонка будет определяться автоматически.`, 'ok');
+      } else {
+        showToast(`Синоним «${val}» уже есть для «${colName}»`, 'warn');
+      }
+      _exitSynonymCapture();
     });
   });
 
