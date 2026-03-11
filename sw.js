@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'price-manager-shell-v10';
+const SHELL_CACHE = 'price-manager-shell-v11';
 const CDN_CACHE   = 'price-manager-cdn-v1';
 const FONT_CACHE  = 'price-manager-fonts-v1';
 const BASE        = '/pricemanager';
@@ -34,9 +34,12 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   const CURRENT = [SHELL_CACHE, CDN_CACHE, FONT_CACHE];
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => !CURRENT.includes(k)).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys =>
+        Promise.all(keys.filter(k => !CURRENT.includes(k)).map(k => caches.delete(k)))
+      )
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => clients.forEach(c => c.postMessage({ type: 'SW_UPDATED' })))
   );
   self.clients.claim();
 });
