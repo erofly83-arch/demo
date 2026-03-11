@@ -51,7 +51,8 @@
 .mhist-undo-btn:hover{background:var(--amber-bg);border-color:var(--amber);color:#92400E}
 /* STICKY FILTER INDICATOR — reuses .hidden-columns visual style */
 #monitorStickyBar.show{display:flex}
-/* Matcher empty state – flush padding (container already provides spacing) */
+/* Empty states – flush padding (container already provides spacing) */
+#monitorEmptyState.empty-state,
 #matcherEmpty.empty-state{padding:4px 0 0}
 /* obrNextStepModal — semi-transparent backdrop */
 #obrNextStepModal.visible{background:rgba(0,0,0,0.35)}
